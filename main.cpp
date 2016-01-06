@@ -11,6 +11,8 @@ janvier 2016
 #include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 
 #include <Imagine/Images.h>
@@ -24,12 +26,26 @@ using namespace Imagine;
 void showhelpinfo(char *s);
 
 
+/*
+QUESTIONS :
+  paramètre int à un template
+
+*/
+
+
 int main (int argc,char *argv[])
 {
     string directory("");
+    string output_directory("");
     bool verbose = false;
+    bool save_outputs = false;
+    bool print_outputs = false;
+    bool gif_style = false;
+    int MAX_RES = 100000;
+
 
 // PROCESS ARGUMENTS
+// ===================================================
     char tmp;
 /*if the program is ran witout options ,it will show the usgage and exit*/
     if(argc == 1)
@@ -38,7 +54,7 @@ int main (int argc,char *argv[])
         return EXIT_FAILURE;
     }
 // get options
-    while((tmp=getopt(argc,argv,"hvd:"))!=-1)
+    while((tmp=getopt(argc,argv,"hvsgpd:r:o:"))!=-1)
     {
         switch(tmp)
         {
@@ -49,6 +65,26 @@ int main (int argc,char *argv[])
   /*option v for verbose*/
           case 'v':
           verbose = true;
+          break;
+  /*option s for save*/
+          case 's':
+          save_outputs = true;
+          break;
+  /*option s for save*/
+          case 'r':
+          MAX_RES = atoi(optarg);
+          break;
+  /*option s for save*/
+          case 'o':
+          output_directory=string(optarg);
+          break;
+  /*option g for gif style format*/
+          case 'g':
+          gif_style = true;
+          break;
+  /*option s for print_outputs*/
+          case 'p':
+          print_outputs = true;
           break;
   /*option d asks for directory*/
           case 'd':
@@ -66,13 +102,23 @@ if(directory==""){
     cout << "Directory option required !" << endl;
     return EXIT_FAILURE;
 }
+// verify options
+if(output_directory==""){
+    output_directory = directory + "/outputs";
+}
+if(!save_outputs) print_outputs = true;
 
 
 
-// MAIN PROGRAMM
-
+// CHARGEMENT DES IMAGES
+// ===================================================
+cout << endl;
+cout << "==================================================="<<endl;
+cout << "CHARGEMENT DES IMAGES" << endl;
+cout << "==================================================="<<endl;
 // vector of images
-vector<Image<FVector<float,3> > > images;
+vector<Image<FVector<float,3>, 2 > > images;
+vector<Image<Color, 2 > > outputs;
 
 //open directory and load images
 DIR *dir;
@@ -104,16 +150,99 @@ if ((dir = opendir (directory.c_str())) != NULL) {
     return EXIT_FAILURE;
 }
 
-//checking images vector's size
+// On vérifie le nombre d'images
 if(images.size()<2){
     cout << "Not enough images loaded, need at least 2" << endl;
     return EXIT_FAILURE;
 }
 
 
-// At this point we should have a vector of Images<Color> of size 2 at least
-find_flow_kanade(images[0], images[1]);
 
+// PRETRAITEMENT DES IMAGES
+// ===================================================
+cout << endl;
+cout << "==================================================="<<endl;
+cout << "PRETRAITEMENT DES IMAGES" << endl;
+cout << "==================================================="<<endl;
+
+int w = images[0].width(), h = images[0].height();
+
+// On vérifie que les images ont la même taille et ne sont pas trop grandes auquel cas on les réduit
+for(int i=0; i<images.size(); i++){
+  if(w != images[i].width() || h != images[i].height()){
+    // Erreur si images de taille différentes
+    throw string("Erreur : Images de tailles différentes");
+  }
+  if(images[i].width() * images[i].height() > MAX_RES){
+    // Rescale si on depasse la resolution maximale
+    double fact = 1.0*MAX_RES / (images[i].width() * images[i].height());
+    if(verbose) cout << "Reducing image n°" << i << endl;
+    images[i] = reduce(images[i], 1/fact);
+  }
+
+}
+
+
+// TRAITEMENT DES IMAGES
+// ===================================================
+cout << endl;
+cout << "==================================================="<<endl;
+cout << "TRAITEMENT DES IMAGES ..." << endl;
+cout << "==================================================="<<endl;
+
+
+bool first = true;
+for(int i=0; i<images.size()-1; i++){
+  // Calcul du flow optique
+  if(verbose) cout << "Processing image n°" << i << endl;
+  Image<FVector<float,2> ,2 > optical_flow = flow_Lucas_Kanade(images[i], images[i+1], 7);
+  // Visualisation
+  Image<Color, 2 > optical_flow_image = make_flow_visible_hsv(optical_flow);
+  outputs.push_back(optical_flow_image);
+  if(first && print_outputs){
+    openWindow(optical_flow_image.width(), optical_flow_image.height()); 
+    first=false;
+  }
+  if(print_outputs){
+    display(optical_flow_image);
+    anyClick();
+  }
+}
+
+
+// SAUVEGARDE DES RESULTATS
+// ===================================================
+if(save_outputs){
+  cout << endl;
+  cout << "==================================================="<<endl;
+  cout << "SAUVEGARDE DES RESULTATS" << endl;
+  cout << "==================================================="<<endl;
+}
+
+if (save_outputs){
+
+  // ouverture ou creation du dossier outputs
+  if ((dir = opendir (output_directory.c_str())) == NULL)
+    if (int e = mkdir( output_directory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0){
+      throw string("Cannot make directory " + output_directory);
+    }
+
+  if(verbose) cout << "Saving images to " + output_directory << endl;
+  for(int i=0; i<outputs.size(); i++){ 
+    cout << "saving " << "/output_" << to_string(i) << ".jpg" << endl;
+    save(outputs[i], output_directory + "/output_" + to_string(i)+".jpg");
+  }
+  if(gif_style){
+    int j=outputs.size();
+    for(int i=outputs.size()-1; i>=0; i--){ 
+      cout << "saving " << "output_" << to_string(j) << ".jpg" << endl;
+      save(outputs[i], output_directory + "/output_" + to_string(j)+".jpg");
+      j++;
+    }
+  }
+
+
+}
 
 
 return 0;
@@ -128,6 +257,8 @@ void showhelpinfo(char *s)
     cout<<"Usage:   "<<s<<" [-option] [argument]"<<endl;
     cout<<"option:  "<<"-h  show help information"<<endl;
     cout<<"         "<<"-d directory"<<endl;
+    cout<<"         "<<"-o output directory"<<endl;
+    cout<<"         "<<"-s save"<<endl;
     cout<<"         "<<"-v verbose"<<endl;
     cout<<"example: "<<s<<" -d directory -s1"<<endl;
 }
