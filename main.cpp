@@ -74,7 +74,7 @@ int main (int argc,char *argv[])
           case 'r':
           MAX_RES = atoi(optarg);
           break;
-  /*option s for save*/
+  /*option o for output dir*/
           case 'o':
           output_directory=string(optarg);
           break;
@@ -82,7 +82,7 @@ int main (int argc,char *argv[])
           case 'g':
           gif_style = true;
           break;
-  /*option s for print_outputs*/
+  /*option p for print_outputs*/
           case 'p':
           print_outputs = true;
           break;

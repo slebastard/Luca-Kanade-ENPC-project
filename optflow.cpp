@@ -158,7 +158,7 @@ Image<Color, 2> make_flow_visible_hsv(Image<FVector<float,2> ,2 >& I){
 			float norm = sqrt(I(i,j)*I(i,j)); // Okay
 			float angle = angle_oriente(I(i,j),ref_vect)*180.0/M_PI + 180.0; // okay
 			in.h = angle ;
-			in.v = sqrt(norm) ; // level up a little bit the norm for good printing
+			in.v = sqrt(norm) ; // increase a little bit the norm for good printing
 			in.s = 1.0;
 			// On convertit l'espace HSV en RGB avec une saturation constante à 255*0.7
 			rgb out = hsv2rgb(in);
@@ -239,7 +239,6 @@ rgb hsv2rgb(hsv in)
         out.g = in.v;
         out.b = t;
         break;
-
     case 3:
         out.r = p;
         out.g = q;
