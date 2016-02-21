@@ -5,11 +5,13 @@ Encadrant : Pascal Monasse
 janvier 2016
 */
 
+#define _USE_MATH_DEFINES
+#include <cmath>
+
 #include <iostream>
 #include <string>
 #include <vector>
 #include <cfloat>
-#include <cmath>
 
 #include <Imagine/Images.h>
 #include "Imagine/Common.h"
@@ -103,6 +105,119 @@ Image<FVector<float,2> ,2 > flow_Lucas_Kanade(Image<FVector<float,3> >& I1, Imag
 	return V;
 }
 
+Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Image<FVector<float, 3> >& I2, float smoothness, float stop, int iter_max){
+
+	int w = I1.width(), h = I1.height();
+	int w2 = I2.width(), h2 = I2.height();
+
+	if (w != w2 || h != h2){
+		// Erreur si images de taille différentes
+		throw string("Erreur : Images de tailles différentes");
+	}
+
+	// 1) Calcul du gradient
+	// On decompose l'image 1 en trois images selon ses 3 composantes R G B 
+	Image<float, 2> I1_R(w, h);
+	Image<float, 2> I1_G(w, h);
+	Image<float, 2> I1_B(w, h);
+
+	for (int i = 0; i < w; i++){
+		for (int j = 0; j < h; j++){
+			I1_R(i, j) = I1(i, j)[0];
+			I1_G(i, j) = I1(i, j)[1];
+			I1_B(i, j) = I1(i, j)[2];
+		}
+	}
+
+	// Calcul des composantes des images gradient des 3 composantes R G B
+	Image<FVector<float, 2>, 2 > gradU_R = image_gradient(I1_R);
+	Image<FVector<float, 2>, 2 > gradU_G = image_gradient(I1_G);
+	Image<FVector<float, 2>, 2 > gradU_B = image_gradient(I1_B);
+
+	// 2) Calcul de dtu
+	// On calcule maintenant dtu pour les 3 composantes
+	Image<float, 2> dtu_R = image_dtu(I1, I2, 0);
+	Image<float, 2> dtu_G = image_dtu(I1, I2, 1);
+	Image<float, 2> dtu_B = image_dtu(I1, I2, 2);
+
+	/*   Calcul du flow optique par itération sur le modèle de Horn & Schunk    */
+
+	//3.1) Créer une carte de vitesses initiales, idéalement en prenant comme entrée le résultat d'une autre méthode
+	//     Pour l'instant l'entrée en vecteurs vitesses sera aléatoire
+	Image<FVector<float, 2>, 2 > V_R = init_map(w, h);
+	Image<FVector<float, 2>, 2 > V_G = init_map(w, h);
+	Image<FVector<float, 2>, 2 > V_B = init_map(w, h);
+	Image<FVector<float, 2>, 2 > V_R_ant(w, h);
+	Image<FVector<float, 2>, 2 > V_G_ant(w, h);
+	Image<FVector<float, 2>, 2 > V_B_ant(w, h);
+	Image<FVector<float, 2>, 2 > V_moy_R(w, h);
+	Image<FVector<float, 2>, 2 > V_moy_G(w, h);
+	Image<FVector<float, 2>, 2 > V_moy_B(w, h);
+	bool must_stop = false;
+	int iter = 0;
+	//3.2) Fixer un critère d'arrêt sur le calcul du gradient
+	while (!must_stop && iter < iter_max)
+	{
+		must_stop = true;
+		for (int i = 0; i < w; i++){
+			for (int j = 0; j < h; j++){
+				V_R_ant(i, j)[0] = V_R(i, j)[0];
+				V_R_ant(i, j)[1] = V_R(i, j)[1];
+				V_moy_R(i, j)[0] = (1 / 12)*(2 * (V_R(i + 1, j)[0] + V_R(i, j + 1)[0] + V_R(i - 1, j)[0] + V_R(i, j - 1)[0]) + V_R(i + 1, j + 1)[0] + V_R(i + 1, j - 1)[0] + V_R(i - 1, j + 1)[0] + V_R(i - 1, j - 1)[0]);
+				V_moy_R(i, j)[1] = (1 / 12)*(2 * (V_R(i + 1, j)[1] + V_R(i, j + 1)[1] + V_R(i - 1, j)[1] + V_R(i, j - 1)[1]) + V_R(i + 1, j + 1)[1] + V_R(i + 1, j - 1)[1] + V_R(i - 1, j + 1)[1] + V_R(i - 1, j - 1)[1]);
+				V_R(i, j)[0] = V_moy_R(i, j)[0] - gradU_R(i, j)[0] * (gradU_R(i, j)[0] * V_moy_R(i, j)[0] + gradU_R(i, j)[1] * V_moy_R(i, j)[1] + dtu_R(i, j)) / (smoothness*smoothness + gradU_R(i, j)[0] * gradU_R(i, j)[0] + gradU_R(i, j)[1] * gradU_R(i, j)[1]);
+				V_R(i, j)[1] = V_moy_R(i, j)[1] - gradU_R(i, j)[1] * (gradU_R(i, j)[0] * V_moy_R(i, j)[0] + gradU_R(i, j)[1] * V_moy_R(i, j)[1] + dtu_R(i, j)) / (smoothness*smoothness + gradU_R(i, j)[0] * gradU_R(i, j)[0] + gradU_R(i, j)[1] * gradU_R(i, j)[1]);
+				if (V_R(i, j)[0] - V_R_ant(i, j)[0] > stop || V_R(i, j)[1] - V_R_ant(i, j)[1] > stop)
+					must_stop = false;
+
+				V_G_ant(i, j)[0] = V_G(i, j)[0];
+				V_G_ant(i, j)[1] = V_G(i, j)[1];
+				V_moy_G(i, j)[0] = (1 / 12)*(2 * (V_G(i + 1, j)[0] + V_G(i, j + 1)[0] + V_G(i - 1, j)[0] + V_G(i, j - 1)[0]) + V_G(i + 1, j + 1)[0] + V_G(i + 1, j - 1)[0] + V_G(i - 1, j + 1)[0] + V_G(i - 1, j - 1)[0]);
+				V_moy_G(i, j)[1] = (1 / 12)*(2 * (V_G(i + 1, j)[1] + V_G(i, j + 1)[1] + V_G(i - 1, j)[1] + V_G(i, j - 1)[1]) + V_G(i + 1, j + 1)[1] + V_G(i + 1, j - 1)[1] + V_G(i - 1, j + 1)[1] + V_G(i - 1, j - 1)[1]);
+				V_G(i, j)[0] = V_moy_G(i, j)[0] - gradU_G(i, j)[0] * (gradU_G(i, j)[0] * V_moy_G(i, j)[0] + gradU_G(i, j)[1] * V_moy_G(i, j)[1] + dtu_G(i, j)) / (smoothness*smoothness + gradU_G(i, j)[0] * gradU_G(i, j)[0] + gradU_G(i, j)[1] * gradU_G(i, j)[1]);
+				V_G(i, j)[1] = V_moy_G(i, j)[1] - gradU_G(i, j)[1] * (gradU_G(i, j)[0] * V_moy_G(i, j)[0] + gradU_G(i, j)[1] * V_moy_G(i, j)[1] + dtu_G(i, j)) / (smoothness*smoothness + gradU_G(i, j)[0] * gradU_G(i, j)[0] + gradU_G(i, j)[1] * gradU_G(i, j)[1]);
+				if (V_G(i, j)[0] - V_G_ant(i, j)[0] > stop || V_G(i, j)[1] - V_G_ant(i, j)[1] > stop)
+					must_stop = false;
+
+				V_B_ant(i, j)[0] = V_B(i, j)[0];
+				V_B_ant(i, j)[1] = V_B(i, j)[1];
+				V_moy_B(i, j)[0] = (1 / 12)*(2 * (V_B(i + 1, j)[0] + V_B(i, j + 1)[0] + V_B(i - 1, j)[0] + V_B(i, j - 1)[0]) + V_B(i + 1, j + 1)[0] + V_B(i + 1, j - 1)[0] + V_B(i - 1, j + 1)[0] + V_B(i - 1, j - 1)[0]);
+				V_moy_B(i, j)[1] = (1 / 12)*(2 * (V_B(i + 1, j)[1] + V_B(i, j + 1)[1] + V_B(i - 1, j)[1] + V_B(i, j - 1)[1]) + V_B(i + 1, j + 1)[1] + V_B(i + 1, j - 1)[1] + V_B(i - 1, j + 1)[1] + V_B(i - 1, j - 1)[1]);
+				V_B(i, j)[0] = V_moy_B(i, j)[0] - gradU_B(i, j)[0] * (gradU_B(i, j)[0] * V_moy_B(i, j)[0] + gradU_B(i, j)[1] * V_moy_B(i, j)[1] + dtu_B(i, j)) / (smoothness*smoothness + gradU_B(i, j)[0] * gradU_B(i, j)[0] + gradU_B(i, j)[1] * gradU_B(i, j)[1]);
+				V_B(i, j)[1] = V_moy_B(i, j)[1];
+				if (V_B(i, j)[0] - V_B_ant(i, j)[0] > stop || V_B(i, j)[1] - V_B_ant(i, j)[1] > stop)
+					must_stop = false;
+			}
+		}
+		iter++;
+	}
+	//3.3) Calculer le gradient a partir du gradient sur chaque teinte. Pour l'instant on prend la moyenne
+	Image<FVector<float, 2>, 2 > V(w, h);
+	for (int i = 0; i < w; i++)
+	{
+		for (int j = 0; j < h; j++)
+		{
+			V(i, j)[0] = (1 / 3)*(V_R(i, j)[0] + V_G(i, j)[0] + V_B(i, j)[0]);
+			V(i, j)[1] = (1 / 3)*(V_R(i, j)[1] + V_G(i, j)[1] + V_B(i, j)[1]);
+		}
+	}
+	// On retourne le flow optique
+	return V;
+}
+
+Image<FVector<float, 2>, 2 > init_map(int width, int height, float v_min, float v_max)
+{
+	Image<FVector<float, 2>, 2 > V(width, height);
+	for (int i = 0; i < width; i++)
+	{
+		for (int j = 0; j < height; j++)
+		{
+			V(i, j)[0] = v_min + (v_max - v_min) * doubleRandom();
+			V(i, j)[1] = v_min + (v_max - v_min) * doubleRandom();
+		}
+	}
+	return V;
+}
 
 // Calcul du gradient spatial d'une image 2D
 Image<FVector<float,2> , 2> image_gradient(Image<float, 2>& I){

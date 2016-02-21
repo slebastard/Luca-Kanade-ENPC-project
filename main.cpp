@@ -5,15 +5,28 @@ Encadrant : Pascal Monasse
 janvier 2016
 */
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+
+#define S_IRWXU (S_IRUSR | S_IWUSR | S_IXUSR)
+#define S_IRWXG (S_IRWXU >> 3)
+
+#define NOMINMAX
+#include <windows.h>
+
+#else
+#include "getopt.h"
+
+#endif
+
+
 #include <iostream>
 #include <string>
 #include <vector>
 #include <stdlib.h>
-#include <unistd.h>
-#include <dirent.h>
+#include "unistd.h"
+#include "dirent.h"
 #include <sys/stat.h>
 #include <sys/types.h>
-
 
 #include <Imagine/Images.h>
 #include "optflow.hpp"
@@ -46,56 +59,57 @@ int main (int argc,char *argv[])
 
 // PROCESS ARGUMENTS
 // ===================================================
-    char tmp;
-/*if the program is ran witout options ,it will show the usgage and exit*/
-    if(argc == 1)
-    {
-        showhelpinfo(argv[0]);
-        return EXIT_FAILURE;
-    }
-// get options
-    while((tmp=getopt(argc,argv,"hvsgpd:r:o:"))!=-1)
-    {
-        switch(tmp)
-        {
-  /*option h show the help infomation*/
-          case 'h':
-          showhelpinfo(argv[0]);
-          break;
-  /*option v for verbose*/
-          case 'v':
-          verbose = true;
-          break;
-  /*option s for save*/
-          case 's':
-          save_outputs = true;
-          break;
-  /*option r for max resolution*/
-          case 'r':
-          MAX_RES = atoi(optarg);
-          break;
-  /*option o for output dir*/
-          case 'o':
-          output_directory=string(optarg);
-          break;
-  /*option g for gif style format*/
-          case 'g':
-          gif_style = true;
-          break;
-  /*option p for print_outputs*/
-          case 'p':
-          print_outputs = true;
-          break;
-  /*option d asks for directory*/
-          case 'd':
-          directory=string(optarg);
-          break;
-  // default shows help
-          default:
-          showhelpinfo(argv[0]);
-          break;
-      }
+  char tmp;
+  /*if the program is ran without options ,it will show the usgage and exit*/
+  if(argc == 1)
+  {
+      showhelpinfo(argv[0]);
+      return EXIT_FAILURE;
   }
+  // get options
+  while((tmp=getopt(argc,argv,"hvsgpd:r:o:"))!=-1)
+      {
+          switch(tmp)
+          {
+    /*option h show the help infomation*/
+            case 'h':
+            showhelpinfo(argv[0]);
+            break;
+    /*option v for verbose*/
+            case 'v':
+            verbose = true;
+            break;
+    /*option s for save*/
+            case 's':
+            save_outputs = true;
+            break;
+    /*option r for max resolution*/
+            case 'r':
+            MAX_RES = atoi(optarg);
+            break;
+    /*option o for output dir*/
+            case 'o':
+            output_directory=string(optarg);
+            break;
+    /*option g for gif style format*/
+            case 'g':
+            gif_style = true;
+            break;
+    /*option p for print_outputs*/
+            case 'p':
+            print_outputs = true;
+            break;
+    /*option d asks for directory*/
+            case 'd':
+            directory=string(optarg);
+            break;
+    // default shows help
+            default:
+            showhelpinfo(argv[0]);
+            break;
+        }
+  }
+
 
 // verify options
 if(directory==""){
@@ -224,10 +238,19 @@ if(save_outputs){
 if (save_outputs){
 
   // ouverture ou creation du dossier outputs
-  if ((dir = opendir (output_directory.c_str())) == NULL)
-    if ( mkdir( output_directory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0){
-      throw string("Cannot make directory " + output_directory);
-    }
+
+	if ((dir = opendir(output_directory.c_str())) == NULL)
+	{
+		#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+			if (int e = CreateDirectory(output_directory.c_str(), NULL) != 0){
+				throw string("Cannot make directory " + output_directory);
+			}
+		#else
+			if (int e = mkdir( output_directory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0){
+				throw string("Cannot make directory " + output_directory);
+			}
+		#endif
+	}
 
   if(verbose) cout << "Saving images to " + output_directory << endl;
   for(int i=0; i<outputs.size(); i++){ 
