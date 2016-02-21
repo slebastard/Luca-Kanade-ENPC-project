@@ -70,7 +70,7 @@ int main (int argc,char *argv[])
           case 's':
           save_outputs = true;
           break;
-  /*option s for save*/
+  /*option r for max resolution*/
           case 'r':
           MAX_RES = atoi(optarg);
           break;
@@ -196,9 +196,11 @@ for(int i=0; i<images.size()-1; i++){
   // Calcul du flow optique
   if(verbose) cout << "Processing image n°" << i << endl;
   Image<FVector<float,2> ,2 > optical_flow = flow_Lucas_Kanade(images[i], images[i+1], 7);
+
   // Visualisation
   Image<Color, 2 > optical_flow_image = make_flow_visible_hsv(optical_flow);
   outputs.push_back(optical_flow_image);
+  
   if(first && print_outputs){
     openWindow(optical_flow_image.width(), optical_flow_image.height()); 
     first=false;
@@ -223,7 +225,7 @@ if (save_outputs){
 
   // ouverture ou creation du dossier outputs
   if ((dir = opendir (output_directory.c_str())) == NULL)
-    if (int e = mkdir( output_directory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0){
+    if ( mkdir( output_directory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0){
       throw string("Cannot make directory " + output_directory);
     }
 
@@ -249,8 +251,6 @@ return 0;
 }
 
 
-
-
 /*funcion that show the help information*/
 void showhelpinfo(char *s)
 {
@@ -259,6 +259,10 @@ void showhelpinfo(char *s)
     cout<<"         "<<"-d directory"<<endl;
     cout<<"         "<<"-o output directory"<<endl;
     cout<<"         "<<"-s save"<<endl;
+    cout<<"         "<<"-p print results"<<endl;
     cout<<"         "<<"-v verbose"<<endl;
+    cout<<"         "<<"-r verbose"<<endl;
+    cout<<"         "<<"-r max resolution of ouptputs"<<endl;
+    cout<<"         "<<"-g gif_style"<<endl;
     cout<<"example: "<<s<<" -d directory -s1"<<endl;
 }
