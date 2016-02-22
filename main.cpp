@@ -11,19 +11,22 @@ janvier 2016
 #define NOMINMAX
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-	#include <windows.h>
-	#include "getopt.h"
+  #include <windows.h>
+  #include "getopt.h"
+  #include "unistd.h"
+  #include "dirent.h"
 #else
-#include <getopt.h>
-
+  #include <getopt.h>
+  #include <unistd.h>
+  #include <dirent.h>
 #endif
+
 
 #include <iostream>
 #include <string>
 #include <vector>
 #include <stdlib.h>
-#include "unistd.h"
-#include "dirent.h"
+
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -67,7 +70,7 @@ int main (int argc,char *argv[])
         return EXIT_FAILURE;
     }
 // get options
-	while ((tmp = getopt(argc, argv, "hvsgpd:r:o:")) != -1)
+	while ((tmp = getopt(argc, argv, "hvsgpd:r:o:m:")) != -1)
 		{
 			switch (tmp)
 			{
@@ -103,6 +106,10 @@ int main (int argc,char *argv[])
 			case 'd':
 				directory = string(optarg);
 				break;
+        /*option m asks for method*/
+      case 'm':
+        method = string(optarg);
+        break;
 				// default shows help
 			default:
 				showhelpinfo(argv[0]);

@@ -22,7 +22,7 @@ janvier 2016
 using namespace std;
 using namespace Imagine;
 
-
+// Calcul du flow optique par la methode Lucas et Kanade
 Image<FVector<float,2> ,2 > flow_Lucas_Kanade(Image<FVector<float,3> >& I1, Image<FVector<float,3> >& I2, int taille_fenetre){
 
 	int w = I1.width(), h = I1.height();
@@ -105,6 +105,8 @@ Image<FVector<float,2> ,2 > flow_Lucas_Kanade(Image<FVector<float,3> >& I1, Imag
 	return V;
 }
 
+
+// Calcul du flow optique par la methode Horn et Schunk itérative
 Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Image<FVector<float, 3> >& I2, float smoothness, float stop, int iter_max){
 
 	int w = I1.width(), h = I1.height();
@@ -159,8 +161,8 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Ima
 	while (!must_stop && iter < iter_max)
 	{
 		must_stop = true;
-		for (int i = 0; i < w; i++){
-			for (int j = 0; j < h; j++){
+		for (int i = 1; i < w-1; i++){
+			for (int j = 1; j < h-1; j++){
 				V_R_ant(i, j)[0] = V_R(i, j)[0];
 				V_R_ant(i, j)[1] = V_R(i, j)[1];
 				V_moy_R(i, j)[0] = (1 / 12)*(2 * (V_R(i + 1, j)[0] + V_R(i, j + 1)[0] + V_R(i - 1, j)[0] + V_R(i, j - 1)[0]) + V_R(i + 1, j + 1)[0] + V_R(i + 1, j - 1)[0] + V_R(i - 1, j + 1)[0] + V_R(i - 1, j - 1)[0]);
@@ -205,6 +207,8 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Ima
 	return V;
 }
 
+
+// Calcul du flow optique par la methode Horn et Schunk Huber L1
 Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >& I1, Image<FVector<float, 3> >& I2)
 {
 	int w = I1.width(), h = I1.height();
@@ -242,6 +246,8 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >&
 
 
 }
+
+
 
 Image<FVector<float, 2>, 2 > init_map(int width, int height, float v_min, float v_max)
 {
