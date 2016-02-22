@@ -23,6 +23,9 @@ using namespace std;
 using namespace Imagine;
 
 // Erreur d'accès dans un Array ici
+
+
+
 Image<FVector<float,2> ,2 > flow_Lucas_Kanade(Image<FVector<float,3> >& I1, Image<FVector<float,3> >& I2, int taille_fenetre){
 
 	int w = I1.width(), h = I1.height();
@@ -184,7 +187,7 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Ima
 				V_moy_B(i, j)[0] = (1 / 12)*(2 * (V_B(i + 1, j)[0] + V_B(i, j + 1)[0] + V_B(i - 1, j)[0] + V_B(i, j - 1)[0]) + V_B(i + 1, j + 1)[0] + V_B(i + 1, j - 1)[0] + V_B(i - 1, j + 1)[0] + V_B(i - 1, j - 1)[0]);
 				V_moy_B(i, j)[1] = (1 / 12)*(2 * (V_B(i + 1, j)[1] + V_B(i, j + 1)[1] + V_B(i - 1, j)[1] + V_B(i, j - 1)[1]) + V_B(i + 1, j + 1)[1] + V_B(i + 1, j - 1)[1] + V_B(i - 1, j + 1)[1] + V_B(i - 1, j - 1)[1]);
 				V_B(i, j)[0] = V_moy_B(i, j)[0] - gradU_B(i, j)[0] * (gradU_B(i, j)[0] * V_moy_B(i, j)[0] + gradU_B(i, j)[1] * V_moy_B(i, j)[1] + dtu_B(i, j)) / (smoothness*smoothness + gradU_B(i, j)[0] * gradU_B(i, j)[0] + gradU_B(i, j)[1] * gradU_B(i, j)[1]);
-				V_B(i, j)[1] = V_moy_B(i, j)[1];
+				V_B(i, j)[1] = V_moy_B(i, j)[1] - gradU_B(i, j)[1] * (gradU_B(i, j)[0] * V_moy_B(i, j)[0] + gradU_B(i, j)[1] * V_moy_B(i, j)[1] + dtu_B(i, j)) / (smoothness*smoothness + gradU_B(i, j)[0] * gradU_B(i, j)[0] + gradU_B(i, j)[1] * gradU_B(i, j)[1]);
 				if (V_B(i, j)[0] - V_B_ant(i, j)[0] > stop || V_B(i, j)[1] - V_B_ant(i, j)[1] > stop)
 					must_stop = false;
 			}
@@ -203,6 +206,44 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Ima
 	}
 	// On retourne le flow optique
 	return V;
+}
+
+Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >& I1, Image<FVector<float, 3> >& I2)
+{
+	int w = I1.width(), h = I1.height();
+	int w2 = I2.width(), h2 = I2.height();
+
+	if (w != w2 || h != h2){
+		// Erreur si images de taille différentes
+		throw string("Erreur : Images de tailles différentes");
+	}
+
+	// 1) Calcul du gradient
+	// On decompose l'image 1 en trois images selon ses 3 composantes R G B 
+	Image<float, 2> I1_R(w, h);
+	Image<float, 2> I1_G(w, h);
+	Image<float, 2> I1_B(w, h);
+
+	for (int i = 0; i < w; i++){
+		for (int j = 0; j < h; j++){
+			I1_R(i, j) = I1(i, j)[0];
+			I1_G(i, j) = I1(i, j)[1];
+			I1_B(i, j) = I1(i, j)[2];
+		}
+	}
+
+	// Calcul des composantes des images gradient des 3 composantes R G B
+	Image<FVector<float, 2>, 2 > gradU_R = image_gradient(I1_R);
+	Image<FVector<float, 2>, 2 > gradU_G = image_gradient(I1_G);
+	Image<FVector<float, 2>, 2 > gradU_B = image_gradient(I1_B);
+
+	// 2) Calcul de dtu
+	// On calcule maintenant dtu pour les 3 composantes
+	Image<float, 2> dtu_R = image_dtu(I1, I2, 0);
+	Image<float, 2> dtu_G = image_dtu(I1, I2, 1);
+	Image<float, 2> dtu_B = image_dtu(I1, I2, 2);
+
+
 }
 
 Image<FVector<float, 2>, 2 > init_map(int width, int height, float v_min, float v_max)

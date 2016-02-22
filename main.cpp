@@ -9,7 +9,10 @@ janvier 2016
 #define S_IRWXG (S_IRWXU >> 3)
 
 #define NOMINMAX
-#include <windows.h>
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+	#include <windows.h>
+	#include "getopt.h"
+#endif
 
 #include <iostream>
 #include <string>
@@ -19,7 +22,6 @@ janvier 2016
 #include "dirent.h"
 #include <sys/stat.h>
 #include <sys/types.h>
-#include "getopt.h"
 
 #include <Imagine/Images.h>
 #include "optflow.hpp"
@@ -60,7 +62,6 @@ int main (int argc,char *argv[])
         return EXIT_FAILURE;
     }
 // get options
-	#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 	while ((tmp = getopt(argc, argv, "hvsgpd:r:o:")) != -1)
 		{
 			switch (tmp)
@@ -103,50 +104,6 @@ int main (int argc,char *argv[])
 				break;
 			}
 		}
-	#else
-		while ((tmp = getopt(argc, argv, "hvsgpd:r:o:")) != -1)
-		{
-			switch (tmp)
-			{
-				/*option h show the help infomation*/
-			case 'h':
-				showhelpinfo(argv[0]);
-				break;
-				/*option v for verbose*/
-			case 'v':
-				verbose = true;
-				break;
-				/*option s for save*/
-			case 's':
-				save_outputs = true;
-				break;
-				/*option s for save*/
-			case 'r':
-				MAX_RES = atoi(optarg);
-				break;
-				/*option o for output dir*/
-			case 'o':
-				output_directory = string(optarg);
-				break;
-				/*option g for gif style format*/
-			case 'g':
-				gif_style = true;
-				break;
-				/*option p for print_outputs*/
-			case 'p':
-				print_outputs = true;
-				break;
-				/*option d asks for directory*/
-			case 'd':
-				directory = string(optarg);
-				break;
-				// default shows help
-			default:
-				showhelpinfo(argv[0]);
-				break;
-			}
-		}
-	#endif
     //
 	
     
