@@ -9,9 +9,13 @@ janvier 2016
 #define S_IRWXG (S_IRWXU >> 3)
 
 #define NOMINMAX
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 	#include <windows.h>
 	#include "getopt.h"
+#else
+#include <getopt.h>
+
 #endif
 
 #include <iostream>
@@ -45,6 +49,7 @@ int main (int argc,char *argv[])
 {
     string directory("");
     string output_directory("");
+    string method("");
     bool verbose = false;
     bool save_outputs = false;
     bool print_outputs = false;
@@ -104,22 +109,24 @@ int main (int argc,char *argv[])
 				break;
 			}
 		}
-    //
-	
-    
 
 // verify options
 if(directory==""){
     cout << "Directory option required !" << endl;
     return EXIT_FAILURE;
 }
-// verify options
 if(output_directory==""){
     output_directory = directory + "/outputs";
 }
 if(!save_outputs) print_outputs = true;
-
-
+if(method==""){
+    cout << "Method option required !" << endl;
+    return EXIT_FAILURE;
+}
+if(method!="LK" && method!="HS"){
+    cout << "Unknown method : " << method << endl;
+    return EXIT_FAILURE;
+}
 
 // CHARGEMENT DES IMAGES
 // ===================================================
@@ -142,7 +149,7 @@ if ((dir = opendir (directory.c_str())) != NULL) {
         // look for supported formats
         if(name.find(".png")!=string::npos || name.find(".jpg")!=string::npos || name.find(".tiff")!=string::npos ){
             Image<Color> I;
-            if(!load(I,directory + name)){
+            if(!load(I, directory + "/" + name)){
                 cout << string("Couldn't load image : ") + name << endl;
                 return EXIT_FAILURE;
             }
@@ -206,10 +213,19 @@ bool first = true;
 for(int i=0; i<images.size()-1; i++){
   // Calcul du flow optique
   if(verbose) cout << "Processing image n°" << i << endl;
-  Image<FVector<float,2> ,2 > optical_flow = flow_Lucas_Kanade(images[i], images[i+1], 7);
+
+    Image<FVector<float,2> ,2 > optical_flow;
+    
+  if(method == "LK")
+    optical_flow = flow_Lucas_Kanade(images[i], images[i+1], 7);
+  else if(method == "HS")
+    optical_flow = flow_Horn_Schunk(images[i], images[i+1]);
+
+    
   // Visualisation
   Image<Color, 2 > optical_flow_image = make_flow_visible_hsv(optical_flow);
   outputs.push_back(optical_flow_image);
+  
   if(first && print_outputs){
     openWindow(optical_flow_image.width(), optical_flow_image.height()); 
     first=false;
@@ -233,6 +249,7 @@ if(save_outputs){
 if (save_outputs){
 
   // ouverture ou creation du dossier outputs
+
 	if ((dir = opendir(output_directory.c_str())) == NULL)
 	{
 		#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
@@ -268,8 +285,6 @@ return 0;
 }
 
 
-
-
 /*funcion that show the help information*/
 void showhelpinfo(char *s)
 {
@@ -278,6 +293,11 @@ void showhelpinfo(char *s)
     cout<<"         "<<"-d directory"<<endl;
     cout<<"         "<<"-o output directory"<<endl;
     cout<<"         "<<"-s save"<<endl;
+    cout<<"         "<<"-p print results"<<endl;
+    cout<<"         "<<"-m method  LK  or  HS"<<endl;
     cout<<"         "<<"-v verbose"<<endl;
+    cout<<"         "<<"-r verbose"<<endl;
+    cout<<"         "<<"-r max resolution of ouptputs"<<endl;
+    cout<<"         "<<"-g gif_style"<<endl;
     cout<<"example: "<<s<<" -d directory -s1"<<endl;
 }

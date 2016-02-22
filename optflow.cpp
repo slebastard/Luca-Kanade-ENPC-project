@@ -22,9 +22,6 @@ janvier 2016
 using namespace std;
 using namespace Imagine;
 
-// Erreur d'accès dans un Array ici
-
-
 
 Image<FVector<float,2> ,2 > flow_Lucas_Kanade(Image<FVector<float,3> >& I1, Image<FVector<float,3> >& I2, int taille_fenetre){
 
@@ -36,7 +33,7 @@ Image<FVector<float,2> ,2 > flow_Lucas_Kanade(Image<FVector<float,3> >& I1, Imag
 		throw string("Erreur : Images de tailles différentes");
 	}
 
-	// 1) Caclcul du gradient
+	// 1) Calcul du gradient
 	// On decompose l'image 1 en trois images selon ses 3 composantes R G B 
 	Image<float, 2> I1_R(w,h);
 	Image<float, 2> I1_G(w,h);
@@ -301,9 +298,8 @@ Image<Color, 2> make_flow_visible_hsv(Image<FVector<float,2> ,2 >& I){
 		}
 	}
 
-	// normalisation de la norme des vecteurs entre 0 et 1
+	// normalisation de la norme L2 des vecteurs entre 0 et 1
 	I/=sqrt(maximum);
-
 
 	// reference vector :
 	FVector<float,2> ref_vect(0.0,1.0);
