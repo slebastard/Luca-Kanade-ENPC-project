@@ -12,9 +12,10 @@ janvier 2016
 
 #define NOMINMAX
 #include <windows.h>
+#include "getopt.h"
 
 #else
-#include "getopt.h"
+#include <getopt.h>
 
 #endif
 
@@ -23,8 +24,8 @@ janvier 2016
 #include <string>
 #include <vector>
 #include <stdlib.h>
-#include "unistd.h"
-#include "dirent.h"
+#include <unistd.h>
+#include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -50,6 +51,7 @@ int main (int argc,char *argv[])
 {
     string directory("");
     string output_directory("");
+    string method("");
     bool verbose = false;
     bool save_outputs = false;
     bool print_outputs = false;
@@ -67,7 +69,7 @@ int main (int argc,char *argv[])
       return EXIT_FAILURE;
   }
   // get options
-  while((tmp=getopt(argc,argv,"hvsgpd:r:o:"))!=-1)
+  while((tmp=getopt(argc,argv,"hvsgpd:r:o:m:"))!=-1)
       {
           switch(tmp)
           {
@@ -103,6 +105,10 @@ int main (int argc,char *argv[])
             case 'd':
             directory=string(optarg);
             break;
+    /*option m asks for method */
+            case 'm':
+            method=string(optarg);
+            break;
     // default shows help
             default:
             showhelpinfo(argv[0]);
@@ -116,13 +122,18 @@ if(directory==""){
     cout << "Directory option required !" << endl;
     return EXIT_FAILURE;
 }
-// verify options
 if(output_directory==""){
     output_directory = directory + "/outputs";
 }
 if(!save_outputs) print_outputs = true;
-
-
+if(method==""){
+    cout << "Method option required !" << endl;
+    return EXIT_FAILURE;
+}
+if(method!="LK" && method!="HS"){
+    cout << "Unknown method : " << method << endl;
+    return EXIT_FAILURE;
+}
 
 // CHARGEMENT DES IMAGES
 // ===================================================
@@ -145,7 +156,7 @@ if ((dir = opendir (directory.c_str())) != NULL) {
         // look for supported formats
         if(name.find(".png")!=string::npos || name.find(".jpg")!=string::npos || name.find(".tiff")!=string::npos ){
             Image<Color> I;
-            if(!load(I,directory + name)){
+            if(!load(I, directory + "/" + name)){
                 cout << string("Couldn't load image : ") + name << endl;
                 return EXIT_FAILURE;
             }
@@ -209,8 +220,15 @@ bool first = true;
 for(int i=0; i<images.size()-1; i++){
   // Calcul du flow optique
   if(verbose) cout << "Processing image n°" << i << endl;
-  Image<FVector<float,2> ,2 > optical_flow = flow_Lucas_Kanade(images[i], images[i+1], 7);
 
+    Image<FVector<float,2> ,2 > optical_flow;
+    
+  if(method == "LK")
+    optical_flow = flow_Lucas_Kanade(images[i], images[i+1], 7);
+  else if(method == "HS")
+    optical_flow = flow_Horn_Schunk(images[i], images[i+1]);
+
+    
   // Visualisation
   Image<Color, 2 > optical_flow_image = make_flow_visible_hsv(optical_flow);
   outputs.push_back(optical_flow_image);
@@ -283,6 +301,7 @@ void showhelpinfo(char *s)
     cout<<"         "<<"-o output directory"<<endl;
     cout<<"         "<<"-s save"<<endl;
     cout<<"         "<<"-p print results"<<endl;
+    cout<<"         "<<"-m method  LK  or  HS"<<endl;
     cout<<"         "<<"-v verbose"<<endl;
     cout<<"         "<<"-r verbose"<<endl;
     cout<<"         "<<"-r max resolution of ouptputs"<<endl;

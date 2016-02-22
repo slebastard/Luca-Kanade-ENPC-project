@@ -184,7 +184,8 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Ima
 				V_moy_B(i, j)[0] = (1 / 12)*(2 * (V_B(i + 1, j)[0] + V_B(i, j + 1)[0] + V_B(i - 1, j)[0] + V_B(i, j - 1)[0]) + V_B(i + 1, j + 1)[0] + V_B(i + 1, j - 1)[0] + V_B(i - 1, j + 1)[0] + V_B(i - 1, j - 1)[0]);
 				V_moy_B(i, j)[1] = (1 / 12)*(2 * (V_B(i + 1, j)[1] + V_B(i, j + 1)[1] + V_B(i - 1, j)[1] + V_B(i, j - 1)[1]) + V_B(i + 1, j + 1)[1] + V_B(i + 1, j - 1)[1] + V_B(i - 1, j + 1)[1] + V_B(i - 1, j - 1)[1]);
 				V_B(i, j)[0] = V_moy_B(i, j)[0] - gradU_B(i, j)[0] * (gradU_B(i, j)[0] * V_moy_B(i, j)[0] + gradU_B(i, j)[1] * V_moy_B(i, j)[1] + dtu_B(i, j)) / (smoothness*smoothness + gradU_B(i, j)[0] * gradU_B(i, j)[0] + gradU_B(i, j)[1] * gradU_B(i, j)[1]);
-				V_B(i, j)[1] = V_moy_B(i, j)[1];
+				V_B(i, j)[1] = V_moy_B(i, j)[1] - gradU_B(i, j)[1] * (gradU_B(i, j)[0] * V_moy_B(i, j)[0] + gradU_B(i, j)[1] * V_moy_B(i, j)[1] + dtu_B(i, j)) / (smoothness*smoothness + gradU_B(i, j)[0] * gradU_B(i, j)[0] + gradU_B(i, j)[1] * gradU_B(i, j)[1]);
+				
 				if (V_B(i, j)[0] - V_B_ant(i, j)[0] > stop || V_B(i, j)[1] - V_B_ant(i, j)[1] > stop)
 					must_stop = false;
 			}
