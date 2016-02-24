@@ -207,9 +207,8 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Ima
 	return V;
 }
 
-
 // Calcul du flow optique par la methode Horn et Schunk Huber L1
-Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >& I1, Image<FVector<float, 3> >& I2)
+Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >& I1, Image<FVector<float, 3> >& I2, int iter_max, float theta, float alpha, float beta, float epsilon)
 {
 	int w = I1.width(), h = I1.height();
 	int w2 = I2.width(), h2 = I2.height();
@@ -234,17 +233,88 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >&
 	}
 
 	// Calcul des composantes des images gradient des 3 composantes R G B
-	Image<FVector<float, 2>, 2 > gradU_R = image_gradient(I1_R);
-	Image<FVector<float, 2>, 2 > gradU_G = image_gradient(I1_G);
-	Image<FVector<float, 2>, 2 > gradU_B = image_gradient(I1_B);
+	FVector<Image<FVector<float, 2>, 2 >, 3> gradI;
+	gradI[0] = image_gradient(I1_R);
+	gradI[1] = image_gradient(I1_G);
+	gradI[2] = image_gradient(I1_B);
 
 	// 2) Calcul de dtu
 	// On calcule maintenant dtu pour les 3 composantes
-	Image<float, 2> dtu_R = image_dtu(I1, I2, 0);
-	Image<float, 2> dtu_G = image_dtu(I1, I2, 1);
-	Image<float, 2> dtu_B = image_dtu(I1, I2, 2);
+	FVector<Image<float, 2>, 3> dtI;
+	dtI[0] = image_dtu(I1, I2, 0);
+	dtI[1] = image_dtu(I1, I2, 1);
+	dtI[2] = image_dtu(I1, I2, 2);
+
+	// 3) On initialise une carte de vitesse de manière aléatoire
+	FVector<Image<FVector<float, 2>, 2 >, 3> V;
+	V[0] = init_map(w, h, 0, 0);
+	V[1] = init_map(w, h, 0, 0);
+	V[2] = init_map(w, h, 0, 0);
+
+	FVector<Image<FMatrix<float, 2, 2>, 2 >, 3> gradV;
+
+	FVector<Image<FVector<float, 2>, 2 >, 3> W;
+	W[0] = init_map(w, h, 0, 0);
+	W[1] = init_map(w, h, 0, 0);
+	W[2] = init_map(w, h, 0, 0);
+
+	// Construisons le vecteur n a partir du gradient d'intensité
+	FVector<Image<FVector<float, 2>, 2>, 3> n;
+	FVector<Image<FVector<float, 2>, 2>, 3> n_ort;
+	// Construisons le carré de la matrice D, nommé ici A
+	FVector<Image<FMatrix<float, 2, 2>, 2>, 3> A;
+	// Il reste a initialiser le vecteur p...
+	FVector<Image<FMatrix<float, 2, 2>, 2>, 3> p;
+	FVector<Image<FVector<float, 2>, 2>, 3> B;
+	for (int comp = 0; comp < 3; comp++)
+	{
+		for (int i = 0; i < w; i++)
+		{
+			for (int j = 0; j < h; j++)
+			{
+				n[comp](i, j)[0] = gradI[comp](i, j).normalize()[0];
+				n[comp](i, j)[1] = gradI[comp](i, j).normalize()[1];
+
+				n_ort[comp](i, j)[0] = n[comp](i, j)[1];
+				n_ort[comp](i, j)[1] = - n[comp](i, j)[0];
+
+				A[comp](i, j) = exp(-alpha * pow(norm(gradI[comp](i, j)), beta)*(n[comp](i, j)*transpose(n[comp](i, j)) + n_ort[comp](i, j)*transpose(n_ort[comp](i, j)));
+
+				B[comp](i, j) = A[comp](i, j) * p[comp](i, j);
+			}
+		}
+	}
 
 
+
+	// 4) On initialise les variables de boucle, et on met à jour l'estimation de la
+	// vitesse tant que le nombre d'iterations maximal n'est pas atteint
+	int iter = 0;
+	while (iter != iter_max)
+	{
+		++iter;
+		for (int comp = 0; comp < 3; comp++)
+		{
+			for (int dim = 0; dim < 2; dim++)
+			{
+				for (int i = 1; i < w - 1; i++)
+				{
+					for (int j = 1; i < h - 1; j++)
+					{
+						gradV[comp](i, j)(0, 0) = (V[comp](i + 1, j)[0] - V[comp](i + 1, j)[0]) / 2;
+						gradV[comp](i, j)(0, 1) = (V[comp](i, j + 1)[0] - V[comp](i, j - 1)[0]) / 2;
+						gradV[comp](i, j)(1, 0) = (V[comp](i + 1, j)[1] - V[comp](i + 1, j)[1]) / 2;
+						gradV[comp](i, j)(1, 1) = (V[comp](i, j + 1)[1] - V[comp](i, j - 1)[1]) / 2;
+						float tau = 1 / (4.0 + epsilon);
+						float maxQ = max(1, norm(p[comp](i,j) + tau*(A[comp](i,j) * gradV[comp](i,j) - epsilon * p[comp](i,j))));
+						p[comp](i, j)[dim] = (p[comp](i, j)[dim] + theta * (A[comp](i, j) * gradV[comp](i, j) - epsilon * p[comp](i, j)[dim]))/maxQ;
+						float div = (B[comp](i + 1, j)[0] - B[comp](i - 1, j)[0]) / 2 + (B[comp](i, j + 1)[1] - B[comp](i, j - 1)[1]) / 2;
+						V[comp](i, j)[dim] = W[comp](i, j)[dim] + theta * div;
+					}
+				}
+			}
+		}
+	}
 }
 
 
