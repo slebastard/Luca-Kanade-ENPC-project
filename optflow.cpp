@@ -106,6 +106,7 @@ Image<FVector<float,2> ,2 > flow_Lucas_Kanade(Image<FVector<float,3> >& I1, Imag
 }
 
 
+
 // Calcul du flow optique par la methode Horn et Schunk itérative
 Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Image<FVector<float, 3> >& I2, float smoothness, float stop, int iter_max){
 
@@ -163,34 +164,39 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Ima
 		must_stop = true;
 		for (int i = 1; i < w-1; i++){
 			for (int j = 1; j < h-1; j++){
-				V_R_ant(i, j)[0] = V_R(i, j)[0];
-				V_R_ant(i, j)[1] = V_R(i, j)[1];
-				V_moy_R(i, j)[0] = (1 / 12)*(2 * (V_R(i + 1, j)[0] + V_R(i, j + 1)[0] + V_R(i - 1, j)[0] + V_R(i, j - 1)[0]) + V_R(i + 1, j + 1)[0] + V_R(i + 1, j - 1)[0] + V_R(i - 1, j + 1)[0] + V_R(i - 1, j - 1)[0]);
-				V_moy_R(i, j)[1] = (1 / 12)*(2 * (V_R(i + 1, j)[1] + V_R(i, j + 1)[1] + V_R(i - 1, j)[1] + V_R(i, j - 1)[1]) + V_R(i + 1, j + 1)[1] + V_R(i + 1, j - 1)[1] + V_R(i - 1, j + 1)[1] + V_R(i - 1, j - 1)[1]);
-				V_R(i, j)[0] = V_moy_R(i, j)[0] - gradU_R(i, j)[0] * (gradU_R(i, j)[0] * V_moy_R(i, j)[0] + gradU_R(i, j)[1] * V_moy_R(i, j)[1] + dtu_R(i, j)) / (smoothness*smoothness + gradU_R(i, j)[0] * gradU_R(i, j)[0] + gradU_R(i, j)[1] * gradU_R(i, j)[1]);
-				V_R(i, j)[1] = V_moy_R(i, j)[1] - gradU_R(i, j)[1] * (gradU_R(i, j)[0] * V_moy_R(i, j)[0] + gradU_R(i, j)[1] * V_moy_R(i, j)[1] + dtu_R(i, j)) / (smoothness*smoothness + gradU_R(i, j)[0] * gradU_R(i, j)[0] + gradU_R(i, j)[1] * gradU_R(i, j)[1]);
-				if (V_R(i, j)[0] - V_R_ant(i, j)[0] > stop || V_R(i, j)[1] - V_R_ant(i, j)[1] > stop)
+				// sauvegarder la valeur précédente de V_R
+				V_R_ant(i, j) = V_R(i, j);
+				// calcul de la moyenne locale R
+				V_moy_R(i, j) = V_moy(V_R,i,j);
+				// calcul du nouveau V_R
+				V_R(i,j) = nouveau_V_c( V_moy_R(i, j), gradU_R(i, j), dtu_R(i,j), smoothness);
+				
+				if ( maxNorm(V_R(i, j) - V_R_ant(i, j)) > stop )
 					must_stop = false;
 
-				V_G_ant(i, j)[0] = V_G(i, j)[0];
-				V_G_ant(i, j)[1] = V_G(i, j)[1];
-				V_moy_G(i, j)[0] = (1 / 12)*(2 * (V_G(i + 1, j)[0] + V_G(i, j + 1)[0] + V_G(i - 1, j)[0] + V_G(i, j - 1)[0]) + V_G(i + 1, j + 1)[0] + V_G(i + 1, j - 1)[0] + V_G(i - 1, j + 1)[0] + V_G(i - 1, j - 1)[0]);
-				V_moy_G(i, j)[1] = (1 / 12)*(2 * (V_G(i + 1, j)[1] + V_G(i, j + 1)[1] + V_G(i - 1, j)[1] + V_G(i, j - 1)[1]) + V_G(i + 1, j + 1)[1] + V_G(i + 1, j - 1)[1] + V_G(i - 1, j + 1)[1] + V_G(i - 1, j - 1)[1]);
-				V_G(i, j)[0] = V_moy_G(i, j)[0] - gradU_G(i, j)[0] * (gradU_G(i, j)[0] * V_moy_G(i, j)[0] + gradU_G(i, j)[1] * V_moy_G(i, j)[1] + dtu_G(i, j)) / (smoothness*smoothness + gradU_G(i, j)[0] * gradU_G(i, j)[0] + gradU_G(i, j)[1] * gradU_G(i, j)[1]);
-				V_G(i, j)[1] = V_moy_G(i, j)[1] - gradU_G(i, j)[1] * (gradU_G(i, j)[0] * V_moy_G(i, j)[0] + gradU_G(i, j)[1] * V_moy_G(i, j)[1] + dtu_G(i, j)) / (smoothness*smoothness + gradU_G(i, j)[0] * gradU_G(i, j)[0] + gradU_G(i, j)[1] * gradU_G(i, j)[1]);
-				if (V_G(i, j)[0] - V_G_ant(i, j)[0] > stop || V_G(i, j)[1] - V_G_ant(i, j)[1] > stop)
+				// sauvegarder la valeur précédente de V_G
+				V_G_ant(i, j) = V_G(i, j);
+				// calcul de la moyenne locale G
+				V_moy_G(i, j) = V_moy(V_G,i,j);
+				// calcul du nouveau V_G
+				V_G(i,j) = nouveau_V_c( V_moy_G(i, j), gradU_G(i, j), dtu_G(i,j), smoothness);
+
+				if ( maxNorm(V_G(i, j) - V_G_ant(i, j) ) > stop )
 					must_stop = false;
 
-				V_B_ant(i, j)[0] = V_B(i, j)[0];
-				V_B_ant(i, j)[1] = V_B(i, j)[1];
-				V_moy_B(i, j)[0] = (1 / 12)*(2 * (V_B(i + 1, j)[0] + V_B(i, j + 1)[0] + V_B(i - 1, j)[0] + V_B(i, j - 1)[0]) + V_B(i + 1, j + 1)[0] + V_B(i + 1, j - 1)[0] + V_B(i - 1, j + 1)[0] + V_B(i - 1, j - 1)[0]);
-				V_moy_B(i, j)[1] = (1 / 12)*(2 * (V_B(i + 1, j)[1] + V_B(i, j + 1)[1] + V_B(i - 1, j)[1] + V_B(i, j - 1)[1]) + V_B(i + 1, j + 1)[1] + V_B(i + 1, j - 1)[1] + V_B(i - 1, j + 1)[1] + V_B(i - 1, j - 1)[1]);
-				V_B(i, j)[0] = V_moy_B(i, j)[0] - gradU_B(i, j)[0] * (gradU_B(i, j)[0] * V_moy_B(i, j)[0] + gradU_B(i, j)[1] * V_moy_B(i, j)[1] + dtu_B(i, j)) / (smoothness*smoothness + gradU_B(i, j)[0] * gradU_B(i, j)[0] + gradU_B(i, j)[1] * gradU_B(i, j)[1]);
-				V_B(i, j)[1] = V_moy_B(i, j)[1] - gradU_B(i, j)[1] * (gradU_B(i, j)[0] * V_moy_B(i, j)[0] + gradU_B(i, j)[1] * V_moy_B(i, j)[1] + dtu_B(i, j)) / (smoothness*smoothness + gradU_B(i, j)[0] * gradU_B(i, j)[0] + gradU_B(i, j)[1] * gradU_B(i, j)[1]);
-				if (V_B(i, j)[0] - V_B_ant(i, j)[0] > stop || V_B(i, j)[1] - V_B_ant(i, j)[1] > stop)
+				// sauvegarder la valeur précédente de V_B
+				V_B_ant(i, j) = V_B(i, j);
+				// calcul de la moyenne locale B
+				V_moy_B(i, j) = V_moy(V_B,i,j);
+				// calcul du nouveau V_B
+				V_B(i,j) = nouveau_V_c( V_moy_B(i, j), gradU_B(i, j), dtu_B(i,j), smoothness);
+
+				if ( maxNorm(V_B(i, j) - V_B_ant(i, j) ) > stop )
 					must_stop = false;
+
 			}
 		}
+		cout << iter << endl;
 		iter++;
 	}
 	//3.3) Calculer le gradient a partir du gradient sur chaque teinte. Pour l'instant on prend la moyenne
@@ -199,8 +205,8 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Ima
 	{
 		for (int j = 0; j < h; j++)
 		{
-			V(i, j)[0] = (1 / 3)*(V_R(i, j)[0] + V_G(i, j)[0] + V_B(i, j)[0]);
-			V(i, j)[1] = (1 / 3)*(V_R(i, j)[1] + V_G(i, j)[1] + V_B(i, j)[1]);
+			V(i, j)[0] = ( V_R(i, j)[0] + V_G(i, j)[0] + V_B(i, j)[0] ) / 3.0 ;
+			V(i, j)[1] = ( V_R(i, j)[1] + V_G(i, j)[1] + V_B(i, j)[1] ) / 3.0 ;
 		}
 	}
 	// On retourne le flow optique
@@ -288,6 +294,16 @@ Image<float, 2> image_dtu(Image<FVector<float,3> >& I1, Image<FVector<float,3> >
 		}
 	}
 	return dtu;
+}
+
+// Calcule la moyenne des vitesses autour du point i,j pour la composante c
+FVector<float, 2> V_moy(Image<FVector<float, 2>, 2 >& V_c, int i, int j){
+	return (2 * (V_c(i + 1, j) + V_c(i, j + 1) + V_c(i - 1, j) + V_c(i, j - 1)) + V_c(i + 1, j + 1) + V_c(i + 1, j - 1) + V_c(i - 1, j + 1) + V_c(i - 1, j - 1)) / 12.0;
+}
+
+// calcul du nouveau vecteur de vitesse en i,j pour la composante c
+FVector<float, 2> nouveau_V_c( FVector<float, 2> V_moy_c_ij, FVector<float, 2> gradU_c_ij, float dtu_c_ij, float smoothness){
+	return  V_moy_c_ij - gradU_c_ij * (gradU_c_ij * V_moy_c_ij + dtu_c_ij) / (smoothness*smoothness + gradU_c_ij * gradU_c_ij);
 }
 
 // Transforme le flow optique en image visualisable

@@ -35,6 +35,8 @@ Image<FVector<float,2> ,2 > optical_flow_calculation(Image<FVector<float,3> >& I
 Image<FVector<float, 2> ,2 > flow_Lucas_Kanade(Image<FVector<float,3> >& I1, Image<FVector<float,3> >& I2, int taille_fenetre=7);
 Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Image<FVector<float, 3> >& I2, float smoothness = 3, float stop = 1, int iter_max = 1000);
 Image<FVector<float, 2>, 2 > init_map(int width, int height, float v_min = 0, float v_max = 1);
+FVector<float, 2> V_moy(Image<FVector<float, 2>, 2 >& V_c, int i, int j);
+FVector<float, 2> nouveau_V_c( FVector<float, 2> V_moy_c_ij, FVector<float, 2> gradU_c_ij, float dtu_c_ij, float smoothness);
 Image<Color, 2> make_flow_visible_hsv(Image<FVector<float,2> ,2 >& I);
 Image<Color, 2> make_flow_visible_grey(Image<FVector<float,2> ,2 >& I);
 rgb hsv2rgb(hsv in);
