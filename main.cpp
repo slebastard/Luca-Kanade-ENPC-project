@@ -29,6 +29,7 @@ janvier 2016
 #include <sstream>
 #include <algorithm>
 #include <iterator>
+#include <cmath>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -45,9 +46,10 @@ void showhelpinfo(char *s);
 
 
 /*
-QUESTIONS :
-  paramètre int à un template
-
+  QUESTIONS :
+  - paramètre int à un template
+  - grad spatial pour chaque composantes ou 3d ?
+  - moyenne sur les composantes ?
 */
 
 
@@ -324,15 +326,19 @@ if (save_outputs){
   }
 
   if(verbose) cout << "Saving images to " + output_directory << endl;
-  for(int i=0; i<outputs.size(); i++){ 
+  int n_dec = int(log10(outputs.size()) + 1); // number of decimal to use for number in name
+  char num[n_dec]; // tableau contenant le numéro  de l'image en chaine de caractères
+  for(int i=0; i<outputs.size(); i++){
     cout << "saving " << "/output_" << to_string(i) << ".jpg" << endl;
-    save(outputs[i], output_directory + "/output_" + to_string(i)+".jpg");
+      
+    sprintf(num, (string("%0"+to_string(n_dec)+"d")).c_str(), i);
+    save(outputs[i], output_directory + "/output_" + num +".jpg");
   }
   if(gif_style){
     int j=outputs.size();
     for(int i=outputs.size()-1; i>=0; i--){ 
-      cout << "saving " << "output_" << to_string(j) << ".jpg" << endl;
-      save(outputs[i], output_directory + "/output_" + to_string(j)+".jpg");
+      cout << "saving " << "output_" << to_string(j) << ".png" << endl;
+      save(outputs[i], output_directory + "/output_" + to_string(j)+".png");
       j++;
     }
   }
@@ -345,7 +351,7 @@ return 0;
 }
 
 
-/*funcion that show the help information*/
+/*fonction that show the help information*/
 void showhelpinfo(char *s)
 {
     cout<<"Usage:   "<<s<<" [-option] [argument]"<<endl;

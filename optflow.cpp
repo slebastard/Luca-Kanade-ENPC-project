@@ -197,9 +197,10 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Ima
 
 			}
 		}
-		cout << iter << endl;
 		iter++;
 	}
+    cout << iter-1 << " itérations" << endl;
+
 	//3.3) Calculer le gradient a partir du gradient sur chaque teinte. Pour l'instant on prend la moyenne
 	Image<FVector<float, 2>, 2 > V = ( V_R + V_G + V_B ) / 3.0 ;
 	
@@ -207,116 +208,131 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Ima
 	return V;
 }
 
+
 // Calcul du flow optique par la methode Horn et Schunk Huber L1
-Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >& I1, Image<FVector<float, 3> >& I2, int iter_max, float theta, float alpha, float beta, float epsilon)
-{
-	// int w = I1.width(), h = I1.height();
-	// int w2 = I2.width(), h2 = I2.height();
+// Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >& I1, Image<FVector<float, 3> >& I2, int iter_max, float theta, float alpha, float beta, float epsilon)
+// {
+// 	int w = I1.width(), h = I1.height();
+// 	int w2 = I2.width(), h2 = I2.height();
 
-	// if (w != w2 || h != h2){
-	// 	// Erreur si images de taille différentes
-	// 	throw string("Erreur : Images de tailles différentes");
-	// }
+// 	if (w != w2 || h != h2){
+// 		// Erreur si images de taille différentes
+// 		throw string("Erreur : Images de tailles différentes");
+// 	}
 
-	// // 1) Calcul du gradient
-	// // On decompose l'image 1 en trois images selon ses 3 composantes R G B 
-	// Image<float, 2> I1_R(w, h);
-	// Image<float, 2> I1_G(w, h);
-	// Image<float, 2> I1_B(w, h);
+// 	// 1) Calcul du gradient
+// 	// On decompose l'image 1 en trois images selon ses 3 composantes R G B 
+// 	Image<float, 2> I1_R(w, h);
+// 	Image<float, 2> I1_G(w, h);
+// 	Image<float, 2> I1_B(w, h);
 
-	// for (int i = 0; i < w; i++){
-	// 	for (int j = 0; j < h; j++){
-	// 		I1_R(i, j) = I1(i, j)[0];
-	// 		I1_G(i, j) = I1(i, j)[1];
-	// 		I1_B(i, j) = I1(i, j)[2];
-	// 	}
-	// }
+// 	for (int i = 0; i < w; i++){
+// 		for (int j = 0; j < h; j++){
+// 			I1_R(i, j) = I1(i, j)[0];
+// 			I1_G(i, j) = I1(i, j)[1];
+// 			I1_B(i, j) = I1(i, j)[2];
+// 		}
+// 	}
 
-	// // Calcul des composantes des images gradient des 3 composantes R G B
-	// FVector<Image<FVector<float, 2>, 2 >, 3> gradI;
-	// gradI[0] = image_gradient(I1_R);
-	// gradI[1] = image_gradient(I1_G);
-	// gradI[2] = image_gradient(I1_B);
+// 	// Calcul des composantes des images gradient des 3 composantes R G B
+// 	FVector<Image<FVector<float, 2>, 2 >, 3> gradI;
+// 	gradI[0] = image_gradient(I1_R);
+// 	gradI[1] = image_gradient(I1_G);
+// 	gradI[2] = image_gradient(I1_B);
 
-	// // 2) Calcul de dtu
-	// // On calcule maintenant dtu pour les 3 composantes
-	// FVector<Image<float, 2>, 3> dtI;
-	// dtI[0] = image_dtu(I1, I2, 0);
-	// dtI[1] = image_dtu(I1, I2, 1);
-	// dtI[2] = image_dtu(I1, I2, 2);
+// 	// 2) Calcul de dtu
+// 	// On calcule maintenant dtu pour les 3 composantes
+// 	FVector<Image<float, 2>, 3> dtI;
+// 	dtI[0] = image_dtu(I1, I2, 0);
+// 	dtI[1] = image_dtu(I1, I2, 1);
+// 	dtI[2] = image_dtu(I1, I2, 2);
 
-	// // 3) On initialise une carte de vitesse de manière aléatoire
-	// FVector<Image<FVector<float, 2>, 2 >, 3> V;
-	// V[0] = init_map(w, h, 0, 0);
-	// V[1] = init_map(w, h, 0, 0);
-	// V[2] = init_map(w, h, 0, 0);
+// 	// 3) On initialise une carte de vitesse de manière aléatoire
+// 	FVector<Image<FVector<float, 2>, 2 >, 3> V;
+// 	V[0] = init_map(w, h, 0, 0);
+// 	V[1] = init_map(w, h, 0, 0);
+// 	V[2] = init_map(w, h, 0, 0);
 
-	// FVector<Image<FVector<FVector<float, 2>, 2>, 2 >, 3> gradV;
+// 	FVector<Image<FVector<FVector<float, 2>, 2>, 2 >, 3> gradV;
 
-	// FVector<Image<FVector<float, 2>, 2 >, 3> W;
-	// W[0] = init_map(w, h, 0, 0);
-	// W[1] = init_map(w, h, 0, 0);
-	// W[2] = init_map(w, h, 0, 0);
+// 	// initialisation de V2, seconde carte de vitesse utilisée pour l'optimisation (V2 doit être proche de V)
+// 	FVector<Image<FVector<float, 2>, 2 >, 3> V2;
+// 	V2[0] = init_map(w, h, 0, 0);
+// 	V2[1] = init_map(w, h, 0, 0);
+// 	V2[2] = init_map(w, h, 0, 0);
 
-	// // Construisons le vecteur n a partir du gradient d'intensité
-	// FVector<Image<FVector<float, 2>, 2>, 3> n;
-	// FVector<Image<FVector<float, 2>, 2>, 3> n_ort;
-	// // Construisons le carré de la matrice D, nommé ici A
-	// FVector<Image<FMatrix<float, 2, 2>, 2>, 3> A;
-	// // Il reste a initialiser le vecteur p...
-	// FVector<Image<FVector<FVector<float,2>, 2>, 2>, 3> p;
-	// FVector<Image<FVector<float, 2>, 2>, 3> B;
-	// for (int comp = 0; comp < 3; comp++)
-	// {
-	// 	for (int i = 0; i < w; i++)
-	// 	{
-	// 		for (int j = 0; j < h; j++)
-	// 		{
-	// 			n[comp](i, j)[0] = gradI[comp](i, j).normalize()[0];
-	// 			n[comp](i, j)[1] = gradI[comp](i, j).normalize()[1];
+// 	// Construisons le vecteur n a partir du gradient d'intensité
+// 	FVector<Image<FMatrix<float, 2, 1>, 2>, 3> n; // matrices vecteurs
+// 	// Et un vecteur orthogonal à n
+// 	FVector<Image<FMatrix<float, 2, 1>, 2>, 3> n_ort; // matrices vecteurs
+// 	// Construisons la racine carrée de la matrice D, nommé ici Dsq
+// 	FVector<Image<FMatrix<float, 2, 2>, 2>, 3> Dsq;
+// 	// Il reste a initialiser le vecteur p
+// 	FVector<Image<FVector<float, 2>, 2>, 3> p;
+// 	FVector<Image<FVector<float, 2>, 2>, 3> B;
+// 	for (int comp = 0; comp < 3; comp++)
+// 	{
+// 		for (int i = 0; i < w; i++)
+// 		{
+// 			for (int j = 0; j < h; j++)
+// 			{
+//                 // Construisons le vecteur n a partir du gradient d'intensité
+// 				n[comp](i, j)[0] = gradI[comp](i, j).normalize()[0];
+// 				n[comp](i, j)[1] = gradI[comp](i, j).normalize()[1];
+                
+//                 // Et un vecteur orthogonal à n
+// 				n_ort[comp](i, j)[0] = n[comp](i, j)[1];
+// 				n_ort[comp](i, j)[1] = - n[comp](i, j)[0];
+                
+//                 // Construisons la racine carrée de la matrice D, nommé ici Dsq
+// 				Dsq[comp](i, j) = ( (n[comp])(i, j)      *  transpose( (n[comp])(i, j) )     )   *  exp(-alpha * pow(norm(gradI[comp](i, j)), beta))
+// 							    +   (n_ort[comp])(i, j)  *  transpose( (n_ort[comp])(i, j) );
+                
+//                 // Construisons le vecteur p
+// 				// ?
+                
+//                 // Et le vecteur B
+// 				B[comp](i, j) = Dsq[comp](i, j) * p[comp](i, j);
+// 			}
+// 		}
+// 	}
 
-	// 			n_ort[comp](i, j)[0] = n[comp](i, j)[1];
-	// 			n_ort[comp](i, j)[1] = - n[comp](i, j)[0];
-
-	// 			A[comp](i, j) = exp(-alpha * pow(norm2(gradI[comp](i, j)), beta)*(n[comp](i, j)*transpose(n[comp](i, j)) + n_ort[comp](i, j)*transpose(n_ort[comp](i, j))));
-
-	// 			B[comp](i, j) = A[comp](i, j) * p[comp](i, j);
-	// 		}
-	// 	}
-	// }
 
 
+// 	// 4) On initialise les variables de boucle, et on met à jour l'estimation de la
+// 	// vitesse tant que le nombre d'iterations maximal n'est pas atteint
+// 	int iter = 0;
+// 	float tau = 1 / (4.0 + epsilon);
 
-	// // 4) On initialise les variables de boucle, et on met à jour l'estimation de la
-	// // vitesse tant que le nombre d'iterations maximal n'est pas atteint
-	// int iter = 0;
-	// while (iter != iter_max)
-	// {
-	// 	++iter;
-	// 	for (int comp = 0; comp < 3; comp++)
-	// 	{
-	// 		for (int dim = 0; dim < 2; dim++)
-	// 		{
-	// 			for (int i = 1; i < w - 1; i++)
-	// 			{
-	// 				for (int j = 1; i < h - 1; j++)
-	// 				{
-	// 					gradV[comp](i, j)[0][0] = (V[comp](i + 1, j)[0] - V[comp](i + 1, j)[0]) / 2;
-	// 					gradV[comp](i, j)[0][1] = (V[comp](i, j + 1)[0] - V[comp](i, j - 1)[0]) / 2;
-	// 					gradV[comp](i, j)[1][0] = (V[comp](i + 1, j)[1] - V[comp](i + 1, j)[1]) / 2;
-	// 					gradV[comp](i, j)[1][1] = (V[comp](i, j + 1)[1] - V[comp](i, j - 1)[1]) / 2;
-	// 					float tau = 1 / (4.0 + epsilon);
-	// 					float maxQ = max(1, norm2(p[comp](i,j)[dim] + tau*(A[comp](i,j) * gradV[comp](i,j)[dim] - epsilon * p[comp](i,j)[dim])));
-	// 					p[comp](i, j)[dim][0] = (p[comp](i, j)[dim][0] + theta * ((A[comp](i, j) * gradV[comp](i, j)[dim])[0] - epsilon * p[comp](i, j)[dim][0]))/maxQ;
-	// 					p[comp](i, j)[dim][1] = (p[comp](i, j)[dim][1] + theta * ((A[comp](i, j) * gradV[comp](i, j)[dim])[1] - epsilon * p[comp](i, j)[dim][1])) / maxQ;
-	// 					float div = (B[comp](i + 1, j)[0] - B[comp](i - 1, j)[0]) / 2 + (B[comp](i, j + 1)[1] - B[comp](i, j - 1)[1]) / 2;
-	// 					V[comp](i, j)[dim] = W[comp](i, j)[dim] + theta * div;
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
-}
+// 	while (iter < iter_max)
+// 	{
+// 		for (int comp = 0; comp < 3; comp++){
+// 			for (int dim = 0; dim < 2; dim++){
+// 				for (int i = 1; i < w - 1; i++){
+// 					for (int j = 1; i < h - 1; j++){
+
+// 						gradV[comp](i, j)[0][0] = (V[comp](i + 1, j)[0] - V[comp](i + 1, j)[0]) / 2.0;
+// 						gradV[comp](i, j)[0][1] = (V[comp](i, j + 1)[0] - V[comp](i, j - 1)[0]) / 2.0;
+// 						gradV[comp](i, j)[1][0] = (V[comp](i + 1, j)[1] - V[comp](i + 1, j)[1]) / 2.0;
+// 						gradV[comp](i, j)[1][1] = (V[comp](i, j + 1)[1] - V[comp](i, j - 1)[1]) / 2.0;						
+// 						float maxQ = max(1.0f, norm(p[comp](i,j)[dim] + tau*(Dsq[comp](i,j) * gradV[comp](i,j)[dim] - epsilon * p[comp](i,j)[dim])));
+// 						p[comp](i, j)[dim][0] = (p[comp](i, j)[dim][0] + theta * ((Dsq[comp](i, j) * gradV[comp](i, j)[dim])[0] - epsilon * p[comp](i, j)[dim][0]))/maxQ;
+// 						p[comp](i, j)[dim][1] = (p[comp](i, j)[dim][1] + theta * ((Dsq[comp](i, j) * gradV[comp](i, j)[dim])[1] - epsilon * p[comp](i, j)[dim][1])) / maxQ;
+// 						float div = (B[comp](i + 1, j)[0] - B[comp](i - 1, j)[0]) / 2.0 + (B[comp](i, j + 1)[1] - B[comp](i, j - 1)[1]) / 2.0;
+// 						V[comp](i, j)[dim] = V2[comp](i, j)[dim] + theta * div;
+// 					}
+// 				}
+// 			}
+// 		}
+//         iter++;
+// 	}
+
+// 	//5) Calculer le flot optique par la moyenne des 3 composantes
+// 	Image<FVector<float, 2>, 2 > Vmoy = ( V[0] + V[1] + V[2] ) / 3.0 ;
+	
+// 	// On retourne le flow optique
+// 	return Vmoy;
+// }
 
 
 
