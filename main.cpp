@@ -26,6 +26,9 @@ janvier 2016
 #include <string>
 #include <vector>
 #include <stdlib.h>
+#include <sstream>
+#include <algorithm>
+#include <iterator>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -52,7 +55,7 @@ int main (int argc,char *argv[])
 {
     string directory("");
     string output_directory("");
-    string method("");
+    vector<string> method_args;
     bool verbose = false;
     bool save_outputs = false;
     bool print_outputs = false;
@@ -70,54 +73,59 @@ int main (int argc,char *argv[])
         return EXIT_FAILURE;
     }
 // get options
-	while ((tmp = getopt(argc, argv, "hvsgpd:r:o:m:")) != -1)
-		{
-			switch (tmp)
-			{
-				/*option h show the help infomation*/
-			case 'h':
-				showhelpinfo(argv[0]);
-				break;
-				/*option v for verbose*/
-			case 'v':
-				verbose = true;
-				break;
-				/*option s for save*/
-			case 's':
-				save_outputs = true;
-				break;
-				/*option s for save*/
-			case 'r':
-				MAX_RES = atoi(optarg);
-				break;
-				/*option o for output dir*/
-			case 'o':
-				output_directory = string(optarg);
-				break;
-				/*option g for gif style format*/
-			case 'g':
-				gif_style = true;
-				break;
-				/*option p for print_outputs*/
-			case 'p':
-				print_outputs = true;
-				break;
-				/*option d asks for directory*/
-			case 'd':
-				directory = string(optarg);
-				break;
-        /*option m asks for method*/
-      case 'm':
-        method = string(optarg);
+  while ((tmp = getopt(argc, argv, "hvsgpd:r:o:m:")) != -1)
+    {
+      switch (tmp)
+      {
+      /*option h show the help infomation*/
+      case 'h':
+        showhelpinfo(argv[0]);
         break;
-				// default shows help
-			default:
-				showhelpinfo(argv[0]);
-				break;
-			}
-		}
+      /*option v for verbose*/
+      case 'v':
+        verbose = true;
+        break;
+      /*option s for save*/
+      case 's':
+        save_outputs = true;
+        break;
+      /*option s for save*/
+      case 'r':
+        MAX_RES = atoi(optarg);
+        break;
+      /*option o for output dir*/
+      case 'o':
+        output_directory = string(optarg);
+        break;
+      /*option g for gif style format*/
+      case 'g':
+        gif_style = true;
+        break;
+      /*option p for print_outputs*/
+      case 'p':
+        print_outputs = true;
+        break;
+      /*option d asks for directory*/
+      case 'd':
+        directory = string(optarg);
+        break;
+      /*option m asks for method args*/
+      case 'm':
+        {
+        istringstream iss(optarg);
+        copy(istream_iterator<string>(iss), istream_iterator<string>(), back_inserter(method_args));
+        break;
+        }
+      // default shows help
+      default:
+        showhelpinfo(argv[0]);
+        break;
+      }
+    }
 
 // verify options
+
+//directory
 if(directory==""){
     cout << "Directory option required !" << endl;
     return EXIT_FAILURE;
@@ -125,15 +133,38 @@ if(directory==""){
 if(output_directory==""){
     output_directory = directory + "/outputs";
 }
+// save outputs
 if(!save_outputs) print_outputs = true;
-if(method==""){
+// method
+if(method_args.size()==0){
     cout << "Method option required !" << endl;
     return EXIT_FAILURE;
 }
-if(method!="LK" && method!="HS"){
-    cout << "Unknown method : " << method << endl;
+if(method_args[0]!="LK" && method_args[0]!="HS"){
+    cout << "Unknown method : " << method_args[0] << endl;
     return EXIT_FAILURE;
 }
+if(method_args[0]=="LK"){
+  if(method_args.size()!=2){
+    cout << "Incorrect args number for LK method ! " << endl;
+    return EXIT_FAILURE;
+  }
+}
+else if(method_args[0]=="HS"){
+  if(method_args.size()!=4){
+    cout << "Incorrect args number for HS method ! " << endl;
+    return EXIT_FAILURE;
+  }
+}
+
+
+
+
+
+
+
+
+
 
 // CHARGEMENT DES IMAGES
 // ===================================================
@@ -183,6 +214,11 @@ if(images.size()<2){
 
 
 
+
+
+
+
+
 // PRETRAITEMENT DES IMAGES
 // ===================================================
 cout << endl;
@@ -208,6 +244,11 @@ for(int i=0; i<images.size(); i++){
 }
 
 
+
+
+
+
+
 // TRAITEMENT DES IMAGES
 // ===================================================
 cout << endl;
@@ -223,12 +264,19 @@ for(int i=0; i<images.size()-1; i++){
 
     Image<FVector<float,2> ,2 > optical_flow;
     
-  if(method == "LK")
-    optical_flow = flow_Lucas_Kanade(images[i], images[i+1], 7);
-  else if(method == "HS")
-    optical_flow = flow_Horn_Schunk(images[i], images[i+1]);
+  if(method_args[0] == "LK"){
+    int taille_fenetre = atoi(method_args[1].c_str());
+    optical_flow = flow_Lucas_Kanade(images[i], images[i+1], taille_fenetre );
+  }
+  else if(method_args[0] == "HS"){
+    float smoothness = atof(method_args[1].c_str());
+    float stop = atof(method_args[2].c_str());
+    int max_iter = atoi(method_args[3].c_str());
+    optical_flow = flow_Horn_Schunk(images[i], images[i+1], smoothness, stop, max_iter);
+  }
 
     
+
   // Visualisation
   Image<Color, 2 > optical_flow_image = make_flow_visible_hsv(optical_flow);
   outputs.push_back(optical_flow_image);
@@ -244,6 +292,11 @@ for(int i=0; i<images.size()-1; i++){
 }
 
 
+
+
+
+
+
 // SAUVEGARDE DES RESULTATS
 // ===================================================
 if(save_outputs){
@@ -257,18 +310,18 @@ if (save_outputs){
 
   // ouverture ou creation du dossier outputs
 
-	if ((dir = opendir(output_directory.c_str())) == NULL)
-	{
-		#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-			if (int e = CreateDirectory(output_directory.c_str(), NULL) != 0){
-				throw string("Cannot make directory " + output_directory);
-			}
-		#else
-			if (int e = mkdir( output_directory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0){
-				throw string("Cannot make directory " + output_directory);
-			}
-		#endif
-	}
+  if ((dir = opendir(output_directory.c_str())) == NULL)
+  {
+    #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+      if (int e = CreateDirectory(output_directory.c_str(), NULL) != 0){
+        throw string("Cannot make directory " + output_directory);
+      }
+    #else
+      if ( mkdir( output_directory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0){
+        throw string("Cannot make directory " + output_directory);
+      }
+    #endif
+  }
 
   if(verbose) cout << "Saving images to " + output_directory << endl;
   for(int i=0; i<outputs.size(); i++){ 
@@ -301,7 +354,7 @@ void showhelpinfo(char *s)
     cout<<"         "<<"-o output directory"<<endl;
     cout<<"         "<<"-s save"<<endl;
     cout<<"         "<<"-p print results"<<endl;
-    cout<<"         "<<"-m method  LK  or  HS"<<endl;
+    cout<<"         "<<"-m method args \"LK taille_fenetre\"  or  \"HS smoothness stop max_iter\" "<<endl;
     cout<<"         "<<"-v verbose"<<endl;
     cout<<"         "<<"-r verbose"<<endl;
     cout<<"         "<<"-r max resolution of ouptputs"<<endl;
