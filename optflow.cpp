@@ -12,6 +12,7 @@ janvier 2016
 #include <string>
 #include <vector>
 #include <cfloat>
+#include <cmath>
 
 #include <Imagine/Images.h>
 #include "Imagine/Common.h"
@@ -257,7 +258,7 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >&
 	V[1] = init_map(w, h, 0, 0);
 	V[2] = init_map(w, h, 0, 0);
 
-	FVector<Image<FMatrix<float, 2, 2>, 2 >, 3> gradV;
+	FVector<Image<FVector<FVector<float, 2>, 2>, 2 >, 3> gradV;
 
 	FVector<Image<FVector<float, 2>, 2 >, 3> W;
 	W[0] = init_map(w, h, 0, 0);
@@ -270,7 +271,7 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >&
 	// Construisons le carré de la matrice D, nommé ici A
 	FVector<Image<FMatrix<float, 2, 2>, 2>, 3> A;
 	// Il reste a initialiser le vecteur p...
-	FVector<Image<FMatrix<float, 2, 2>, 2>, 3> p;
+	FVector<Image<FVector<FVector<float,2>, 2>, 2>, 3> p;
 	FVector<Image<FVector<float, 2>, 2>, 3> B;
 	for (int comp = 0; comp < 3; comp++)
 	{
@@ -284,7 +285,7 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >&
 				n_ort[comp](i, j)[0] = n[comp](i, j)[1];
 				n_ort[comp](i, j)[1] = - n[comp](i, j)[0];
 
-				A[comp](i, j) = exp(-alpha * pow(norm(gradI[comp](i, j)), beta)*(n[comp](i, j)*transpose(n[comp](i, j)) + n_ort[comp](i, j)*transpose(n_ort[comp](i, j)));
+				A[comp](i, j) = exp(-alpha * pow(norm2(gradI[comp](i, j)), beta)*(n[comp](i, j)*transpose(n[comp](i, j)) + n_ort[comp](i, j)*transpose(n_ort[comp](i, j))));
 
 				B[comp](i, j) = A[comp](i, j) * p[comp](i, j);
 			}
@@ -307,13 +308,14 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >&
 				{
 					for (int j = 1; i < h - 1; j++)
 					{
-						gradV[comp](i, j)(0, 0) = (V[comp](i + 1, j)[0] - V[comp](i + 1, j)[0]) / 2;
-						gradV[comp](i, j)(0, 1) = (V[comp](i, j + 1)[0] - V[comp](i, j - 1)[0]) / 2;
-						gradV[comp](i, j)(1, 0) = (V[comp](i + 1, j)[1] - V[comp](i + 1, j)[1]) / 2;
-						gradV[comp](i, j)(1, 1) = (V[comp](i, j + 1)[1] - V[comp](i, j - 1)[1]) / 2;
+						gradV[comp](i, j)[0][0] = (V[comp](i + 1, j)[0] - V[comp](i + 1, j)[0]) / 2;
+						gradV[comp](i, j)[0][1] = (V[comp](i, j + 1)[0] - V[comp](i, j - 1)[0]) / 2;
+						gradV[comp](i, j)[1][0] = (V[comp](i + 1, j)[1] - V[comp](i + 1, j)[1]) / 2;
+						gradV[comp](i, j)[1][1] = (V[comp](i, j + 1)[1] - V[comp](i, j - 1)[1]) / 2;
 						float tau = 1 / (4.0 + epsilon);
-						float maxQ = max(1, norm(p[comp](i,j) + tau*(A[comp](i,j) * gradV[comp](i,j) - epsilon * p[comp](i,j))));
-						p[comp](i, j)[dim] = (p[comp](i, j)[dim] + theta * (A[comp](i, j) * gradV[comp](i, j) - epsilon * p[comp](i, j)[dim]))/maxQ;
+						float maxQ = max(1, norm2(p[comp](i,j)[dim] + tau*(A[comp](i,j) * gradV[comp](i,j)[dim] - epsilon * p[comp](i,j)[dim])));
+						p[comp](i, j)[dim][0] = (p[comp](i, j)[dim][0] + theta * ((A[comp](i, j) * gradV[comp](i, j)[dim])[0] - epsilon * p[comp](i, j)[dim][0]))/maxQ;
+						p[comp](i, j)[dim][1] = (p[comp](i, j)[dim][1] + theta * ((A[comp](i, j) * gradV[comp](i, j)[dim])[1] - epsilon * p[comp](i, j)[dim][1])) / maxQ;
 						float div = (B[comp](i + 1, j)[0] - B[comp](i - 1, j)[0]) / 2 + (B[comp](i, j + 1)[1] - B[comp](i, j - 1)[1]) / 2;
 						V[comp](i, j)[dim] = W[comp](i, j)[dim] + theta * div;
 					}
