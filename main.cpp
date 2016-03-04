@@ -42,7 +42,7 @@ using namespace std;
 using namespace Imagine;
 
 
-void showhelpinfo(char *s);
+void showhelpinfo(string s = "optflow");
 
 
 /*
@@ -71,7 +71,7 @@ int main (int argc,char *argv[])
 /*if the program is ran without options ,it will show the usgage and exit*/
     if(argc == 1)
     {
-        showhelpinfo(argv[0]);
+        showhelpinfo(string(argv[0]));
         return EXIT_FAILURE;
     }
 // get options
@@ -81,7 +81,7 @@ int main (int argc,char *argv[])
       {
       /*option h show the help infomation*/
       case 'h':
-        showhelpinfo(argv[0]);
+        showhelpinfo(string(argv[0]));
         break;
       /*option v for verbose*/
       case 'v':
@@ -120,7 +120,7 @@ int main (int argc,char *argv[])
         }
       // default shows help
       default:
-        showhelpinfo(argv[0]);
+        showhelpinfo(string(argv[0]));
         break;
       }
     }
@@ -145,23 +145,27 @@ if(method_args.size()==0){
 
 if (method_args[0] != "LK" && method_args[0] != "HS" && method_args[0] != "HSL1"){
     cout << "Unknown method : " << method_args[0] << endl;
+    showhelpinfo();
     return EXIT_FAILURE;
 }
 if(method_args[0]=="LK"){
   if(method_args.size()!=2){
     cout << "Incorrect args number for LK method ! " << endl;
+    showhelpinfo();
     return EXIT_FAILURE;
   }
 }
 else if(method_args[0]=="HS"){
   if(method_args.size()!=4){
     cout << "Incorrect args number for HS method ! " << endl;
+    showhelpinfo();
     return EXIT_FAILURE;
   }
 }
 else if (method_args[0] == "HSL1"){
-	if (method_args.size() != 4){
-		cout << "Incorrect args number for HS method ! " << endl;
+	if (method_args.size() != 3){
+		cout << "Incorrect args number for HSL1 method ! " << endl;
+    showhelpinfo();
 		return EXIT_FAILURE;
 	}
 }
@@ -275,7 +279,7 @@ for(int i=0; i<images.size()-1; i++){
 	else if (method_args[0] == "HSL1")
 	{
 		float smoothness = atof(method_args[1].c_str());
-		int max_iter = atoi(method_args[3].c_str());
+		int max_iter = atoi(method_args[2].c_str());
 		optical_flow = flow_Horn_Schunk_HuberL1(images[i], images[i + 1], max_iter, smoothness);
 	}
     
@@ -353,7 +357,7 @@ return 0;
 
 
 /*fonction that show the help information*/
-void showhelpinfo(char *s)
+void showhelpinfo(string s)
 {
     cout<<"Usage:   "<<s<<" [-option] [argument]"<<endl;
     cout<<"option:  "<<"-h  show help information"<<endl;
@@ -361,7 +365,7 @@ void showhelpinfo(char *s)
     cout<<"         "<<"-o output directory"<<endl;
     cout<<"         "<<"-s save"<<endl;
     cout<<"         "<<"-p print results"<<endl;
-    cout<<"         "<<"-m method args \"LK taille_fenetre\"  or  \"HS smoothness stop max_iter\" "<<endl;
+    cout<<"         "<<"-m method args \"LK taille_fenetre\"  or\n           \"HS smoothness stop max_iter\"  or\n        \"HSL1 smoothness max_iter\" "<<endl;
     cout<<"         "<<"-v verbose"<<endl;
     cout<<"         "<<"-r verbose"<<endl;
     cout<<"         "<<"-r max resolution of ouptputs"<<endl;
