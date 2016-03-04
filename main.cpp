@@ -130,7 +130,7 @@ if(method==""){
     cout << "Method option required !" << endl;
     return EXIT_FAILURE;
 }
-if(method!="LK" && method!="HS"){
+if(method!="LK" && method!="HS" && method!="HSL1"){
     cout << "Unknown method : " << method << endl;
     return EXIT_FAILURE;
 }
@@ -225,8 +225,10 @@ for(int i=0; i<images.size()-1; i++){
     
   if(method == "LK")
     optical_flow = flow_Lucas_Kanade(images[i], images[i+1], 7);
-  else if(method == "HS")
-    optical_flow = flow_Horn_Schunk(images[i], images[i+1]);
+  else if (method == "HS")
+	  optical_flow = flow_Horn_Schunk(images[i], images[i + 1]);
+  else if (method == "HSL1")
+	  optical_flow = flow_Horn_Schunk_HuberL1(images[i], images[i + 1]);
 
     
   // Visualisation

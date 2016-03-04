@@ -215,7 +215,7 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Ima
 }
 
 // Calcul du flow optique par la methode Horn et Schunk Huber L1
-Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >& I1, Image<FVector<float, 3> >& I2, int iter_max, float theta, float alpha, float beta, float epsilon)
+Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >& I1, Image<FVector<float, 3> >& I2, int iter_max, float theta, float alpha, float beta, float epsilon, float lambda)
 {
 	int w = I1.width(), h = I1.height();
 	int w2 = I2.width(), h2 = I2.height();
@@ -266,28 +266,40 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >&
 	W[2] = init_map(w, h, 0, 0);
 
 	// Construisons le vecteur n a partir du gradient d'intensité
-	FVector<Image<FVector<float, 2>, 2>, 3> n;
-	FVector<Image<FVector<float, 2>, 2>, 3> n_ort;
+	FVector<Image<FMatrix<float, 2, 1>, 2>, 3> n;
+	FVector<Image<FMatrix<float, 2, 1>, 2>, 3> n_ort;
 	// Construisons le carré de la matrice D, nommé ici A
 	FVector<Image<FMatrix<float, 2, 2>, 2>, 3> A;
 	// Il reste a initialiser le vecteur p...
-	FVector<Image<FVector<FVector<float,2>, 2>, 2>, 3> p;
-	FVector<Image<FVector<float, 2>, 2>, 3> B;
+	FVector<Image<FMatrix<float, 2, 2>, 2>, 3> p;
+	FVector<Image<FVector<FVector<float, 2>, 2>, 2>, 3> B;
+	FVector<FVector<float, 2>,2> Id;
+	FVector<float, 2> Id1;
+	Id1[0] = 1;
+	Id1[1] = 0;
+	FVector<float, 2> Id2;
+	Id2[0] = 0;
+	Id2[1] = 1;
+	Id[0] = Id1;
+	Id[0] = Id2;
 	for (int comp = 0; comp < 3; comp++)
 	{
 		for (int i = 0; i < w; i++)
 		{
 			for (int j = 0; j < h; j++)
 			{
-				n[comp](i, j)[0] = gradI[comp](i, j).normalize()[0];
-				n[comp](i, j)[1] = gradI[comp](i, j).normalize()[1];
+				n[comp](i, j)(0,0) = gradI[comp](i, j).normalize()[0];
+				n[comp](i, j)(1,0) = gradI[comp](i, j).normalize()[1];
 
-				n_ort[comp](i, j)[0] = n[comp](i, j)[1];
-				n_ort[comp](i, j)[1] = - n[comp](i, j)[0];
+				n_ort[comp](i, j)(0,0) = n[comp](i, j)[1];
+				n_ort[comp](i, j)(1,0) = - n[comp](i, j)[0];
 
-				A[comp](i, j) = exp(-alpha * pow(norm2(gradI[comp](i, j)), beta)*(n[comp](i, j)*transpose(n[comp](i, j)) + n_ort[comp](i, j)*transpose(n_ort[comp](i, j))));
+				// Represente le terme D^(1/2)
+				A[comp](i, j) = exp(-alpha * pow(norm2(gradI[comp](i, j)), beta))*(n[comp](i, j)*transpose(n[comp](i, j)) + n_ort[comp](i, j)*transpose(n_ort[comp](i, j)));
 
-				B[comp](i, j) = A[comp](i, j) * p[comp](i, j);
+				// Représente le produit D^(1/2)*p_{d}^{n+1}
+				B[comp](i, j)[0] = (A[comp](i, j) * p[comp](i, j))*Id[0];
+				B[comp](i, j)[1] = (A[comp](i, j) * p[comp](i, j))*Id[1];
 			}
 		}
 	}
@@ -308,24 +320,59 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >&
 				{
 					for (int j = 1; i < h - 1; j++)
 					{
+						// Calcul des termes utiles a l'actualisation de p
 						gradV[comp](i, j)[0][0] = (V[comp](i + 1, j)[0] - V[comp](i + 1, j)[0]) / 2;
 						gradV[comp](i, j)[0][1] = (V[comp](i, j + 1)[0] - V[comp](i, j - 1)[0]) / 2;
 						gradV[comp](i, j)[1][0] = (V[comp](i + 1, j)[1] - V[comp](i + 1, j)[1]) / 2;
 						gradV[comp](i, j)[1][1] = (V[comp](i, j + 1)[1] - V[comp](i, j - 1)[1]) / 2;
 						float tau = 1 / (4.0 + epsilon);
-						float maxQ = max(1, norm2(p[comp](i,j)[dim] + tau*(A[comp](i,j) * gradV[comp](i,j)[dim] - epsilon * p[comp](i,j)[dim])));
-						p[comp](i, j)[dim][0] = (p[comp](i, j)[dim][0] + theta * ((A[comp](i, j) * gradV[comp](i, j)[dim])[0] - epsilon * p[comp](i, j)[dim][0]))/maxQ;
-						p[comp](i, j)[dim][1] = (p[comp](i, j)[dim][1] + theta * ((A[comp](i, j) * gradV[comp](i, j)[dim])[1] - epsilon * p[comp](i, j)[dim][1])) / maxQ;
-						float div = (B[comp](i + 1, j)[0] - B[comp](i - 1, j)[0]) / 2 + (B[comp](i, j + 1)[1] - B[comp](i, j - 1)[1]) / 2;
-						V[comp](i, j)[dim] = W[comp](i, j)[dim] + theta * div;
+						float maxQ = max(float(1), norm2(p[comp](i, j)*Id[dim] + tau*(A[comp](i, j) * gradV[comp](i, j)[dim] - epsilon * p[comp](i, j)*Id[dim])));
+
+						// Actualisation de p
+						p[comp](i, j)(0, dim) = (p[comp](i, j)(0, dim) + theta * ((A[comp](i, j) * gradV[comp](i, j)[dim])[0] - epsilon * p[comp](i, j)(0, dim))) / maxQ;
+						p[comp](i, j)(1, dim) = (p[comp](i, j)(1, dim) + theta * ((A[comp](i, j) * gradV[comp](i, j)[dim])[1] - epsilon * p[comp](i, j)(1, dim))) / maxQ;
+
+						// Actualisation de V
+						V[comp](i, j)[dim] = W[comp](i, j)[dim] + theta * divergence(B[comp](i, j + 1)[dim], B[comp](i, j - 1)[dim], B[comp](i + 1, j)[dim], B[comp](i - 1, j)[dim]);
+
+						// Actualisation de W
+						W[comp](i, j)[dim] = V[comp](i, j)[dim];
+						if (rho(V[comp](i, j), gradI[comp](i, j), I1(i, j)[comp], I2(i, j)[comp]) > lambda * theta * pow(norm2(gradI[comp](i, j)), 2))
+							W[comp](i, j)[dim] -= lambda * theta * gradI[comp](i, j)[dim];
+						else if (rho(V[comp](i, j), gradI[comp](i, j), I1(i, j)[comp], I2(i, j)[comp]) < lambda * theta * pow(norm2(gradI[comp](i, j)), 2))
+							W[comp](i, j)[dim] += lambda * theta * gradI[comp](i, j)[dim];
+						else
+							W[comp](i, j)[dim] -= rho(V[comp](i, j), gradI[comp](i, j), I1(i, j)[comp], I2(i, j)[comp]) * gradI[comp](i, j)[dim] / pow(norm2(gradI[comp](i, j)),2);
 					}
 				}
 			}
 		}
 	}
+	Image<FVector<float, 2>, 2 > U(w, h);
+	for (int i = 0; i < w; i++)
+	{
+		for (int j = 0; j < h; j++)
+		{
+			U(i, j)[0] = (V[0](i, j)[0] + V[1](i, j)[0] + V[2](i, j)[0]) / 3.0;
+			U(i, j)[1] = (V[0](i, j)[1] + V[1](i, j)[1] + V[2](i, j)[1]) / 3.0;
+		}
+	}
+	return U;
 }
 
+float divergence(FVector<float, 2> b_droite, FVector<float, 2> b_gauche, FVector<float, 2> b_haut, FVector<float, 2> b_bas)
+{
+	float div = 0;
+	div += (b_bas[0] - b_haut[0]) / 2.0;
+	div += (b_droite[1] - b_gauche[1])/ 2.0;
+	return div;
+}
 
+float rho(const FVector<float, 2>& u, const FVector<float, 2>& gradI, const float& I1, const float& I0)
+{
+	float rho = u*gradI + I1 - I0;
+	return rho;
+}
 
 Image<FVector<float, 2>, 2 > init_map(int width, int height, float v_min, float v_max)
 {
