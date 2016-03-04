@@ -197,19 +197,13 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk(Image<FVector<float, 3> >& I1, Ima
 
 			}
 		}
-		cout << iter << endl;
 		iter++;
 	}
+    cout << iter-1 << " itérations" << endl;
+
 	//3.3) Calculer le gradient a partir du gradient sur chaque teinte. Pour l'instant on prend la moyenne
-	Image<FVector<float, 2>, 2 > V(w, h);
-	for (int i = 0; i < w; i++)
-	{
-		for (int j = 0; j < h; j++)
-		{
-			V(i, j)[0] = ( V_R(i, j)[0] + V_G(i, j)[0] + V_B(i, j)[0] ) / 3.0 ;
-			V(i, j)[1] = ( V_R(i, j)[1] + V_G(i, j)[1] + V_B(i, j)[1] ) / 3.0 ;
-		}
-	}
+	Image<FVector<float, 2>, 2 > V = ( V_R + V_G + V_B ) / 3.0 ;
+	
 	// On retourne le flow optique
 	return V;
 }
