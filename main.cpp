@@ -332,7 +332,7 @@ if (save_outputs){
 
   if(verbose) cout << "Saving images to " + output_directory << endl;
   int n_dec = int(log10(outputs.size()) + 1); // number of decimal to use for number in name
-  char num[n_dec]; // tableau contenant le numéro  de l'image en chaine de caractères
+  char* num = new char[n_dec]; // tableau contenant le numéro  de l'image en chaine de caractères
   for(int i=0; i<outputs.size(); i++){
     cout << "saving " << "/output_" << to_string(i) << ".jpg" << endl;
       

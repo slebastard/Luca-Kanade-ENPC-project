@@ -315,9 +315,9 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >&
 					for (int j = 1; i < h - 1; j++)
 					{
 						// Calcul des termes utiles a l'actualisation de p
-						gradV[comp](i, j)[0][0] = (V[comp](i + 1, j)[0] - V[comp](i + 1, j)[0]) / 2;
+						gradV[comp](i, j)[0][0] = (V[comp](i + 1, j)[0] - V[comp](i - 1, j)[0]) / 2;
 						gradV[comp](i, j)[0][1] = (V[comp](i, j + 1)[0] - V[comp](i, j - 1)[0]) / 2;
-						gradV[comp](i, j)[1][0] = (V[comp](i + 1, j)[1] - V[comp](i + 1, j)[1]) / 2;
+						gradV[comp](i, j)[1][0] = (V[comp](i + 1, j)[1] - V[comp](i - 1, j)[1]) / 2;
 						gradV[comp](i, j)[1][1] = (V[comp](i, j + 1)[1] - V[comp](i, j - 1)[1]) / 2;
 						float tau = 1 / (4.0 + epsilon);
 						float maxQ = max(float(1), norm2(p[comp](i, j)*Id[dim] + tau*(A[comp](i, j) * gradV[comp](i, j)[dim] - epsilon * p[comp](i, j)*Id[dim])));
