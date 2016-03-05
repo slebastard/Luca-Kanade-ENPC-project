@@ -163,7 +163,7 @@ else if(method_args[0]=="HS"){
   }
 }
 else if (method_args[0] == "HSL1"){
-	if (method_args.size() != 3){
+	if (method_args.size() != 2){
 		cout << "Incorrect args number for HSL1 method ! " << endl;
     showhelpinfo();
 		return EXIT_FAILURE;
@@ -278,9 +278,8 @@ for(int i=0; i<images.size()-1; i++){
 	}
 	else if (method_args[0] == "HSL1")
 	{
-		float smoothness = atof(method_args[1].c_str());
-		int max_iter = atoi(method_args[2].c_str());
-		optical_flow = flow_Horn_Schunk_HuberL1(images[i], images[i + 1], max_iter, smoothness);
+		int max_iter = atoi(method_args[1].c_str());
+		optical_flow = flow_Horn_Schunk_HuberL1(images[i], images[i + 1], max_iter);
 	}
     
 
@@ -365,7 +364,7 @@ void showhelpinfo(string s)
     cout<<"         "<<"-o output directory"<<endl;
     cout<<"         "<<"-s save"<<endl;
     cout<<"         "<<"-p print results"<<endl;
-    cout<<"         "<<"-m method args \"LK taille_fenetre\"  or\n           \"HS smoothness stop max_iter\"  or\n        \"HSL1 smoothness max_iter\" "<<endl;
+    cout<<"         "<<"-m method args \"LK taille_fenetre\"  or\n           \"HS smoothness stop max_iter\"  or\n        \"HSL1 max_iter\" "<<endl;
     cout<<"         "<<"-v verbose"<<endl;
     cout<<"         "<<"-r verbose"<<endl;
     cout<<"         "<<"-r max resolution of ouptputs"<<endl;
