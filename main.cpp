@@ -2,7 +2,7 @@
 Projet MOPSI : Flux optique
 Loic Cressot  &  Simon Lebastard
 Encadrant : Pascal Monasse
-janvier 2016
+Janvier 2016
 */
 
 #define S_IRWXU (S_IRUSR | S_IWUSR | S_IXUSR)
@@ -36,6 +36,7 @@ janvier 2016
 
 #include <Imagine/Images.h>
 #include "optflow.hpp"
+#include "readflow.h"
 
 
 using namespace std;
@@ -57,11 +58,13 @@ int main (int argc,char *argv[])
 {
     string directory("");
     string output_directory("");
+	string ground_truth_path("");
     vector<string> method_args;
     bool verbose = false;
     bool save_outputs = false;
     bool print_outputs = false;
     bool gif_style = false;
+	bool comp_error_map = false;
     int MAX_RES = 100000;
 
 
@@ -111,6 +114,11 @@ int main (int argc,char *argv[])
       case 'd':
         directory = string(optarg);
         break;
+	  /*option e for error estimation output*/
+	  case 'e':
+		ground_truth_path = string(optarg);
+		comp_error_map = true;
+		break;
       /*option m asks for method args*/
       case 'm':
         {
@@ -348,6 +356,14 @@ if (save_outputs){
   }
 
 
+}
+
+// GENERATION DE LA CARTE D'ERREUR
+// ===================================================
+if (comp_error_map){
+	// A COMPLETER
+	// GENERATION DE LA CARTE D'ERREUR 
+	// + TRAITEMENT ET AFFICHAGE
 }
 
 
