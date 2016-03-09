@@ -15,8 +15,8 @@ janvier 2016
 #include <cmath>
 
 #include <Imagine/Images.h>
-#include "Imagine/Common.h"
-#include "Imagine/LinAlg.h"
+#include <Imagine/Common.h>
+#include <Imagine/LinAlg.h>
 
 #include "optflow.hpp"
 
@@ -65,11 +65,10 @@ Image<FVector<float,2> ,2 > flow_Lucas_Kanade(Image<FVector<float,3> >& I1, Imag
 
 	// Calcul flow optique :
 	int n = (int)taille_fenetre/2;
-    //const int n_equations = taille_fenetre * taille_fenetre * 3;
-	FMatrix<float, 147, 2> A(0.0);
-	FVector<float, 147> b(0.0);
-	//Matrix<float> A(n_equations,2);
-	//Vector<float> b(n_equations);
+    const int n_equations = taille_fenetre * taille_fenetre * 3;
+
+	Matrix<float> A(n_equations,2);
+	Vector<float> b(n_equations);
 
 	// Boucle sur les pixels
 	for (int i=0; i < w ; i++){
@@ -98,7 +97,9 @@ Image<FVector<float,2> ,2 > flow_Lucas_Kanade(Image<FVector<float,3> >& I1, Imag
 				}
 			}
 			// On remplit V
-			V(i,j) = linSolve(A,b);
+            Vector<float> v = linSolve(A,b);
+            V(i,j)[0] = v[0];
+            V(i,j)[1] = v[1];
 		}
 	}
 
@@ -336,7 +337,7 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >&
                     	// Actualisation de p
                     	diff = p[comp](i, j)[dim] * (1.0 - tau*epsilon)  +  tau * A[comp](i, j)*gradV[comp](i, j)[dim];
 						float maxQ = max(1.0f, norm(diff) );
-						cout << maxQ << " "<< norm(diff) << endl;
+						//cout << maxQ << " "<< norm(diff) << endl;
 						p[comp](i, j)[dim] =  diff / maxQ;
 
 						// Représente le produit D^(1/2)*p_{d}^{n+1}
@@ -347,12 +348,13 @@ Image<FVector<float, 2>, 2 > flow_Horn_Schunk_HuberL1(Image<FVector<float, 3> >&
 					}
 
 					// Actualisation de W
-					W[comp](i, j) = V[comp](i, j);
 
 					float rho_ = rho(V[comp](i, j), gradI[comp](i, j), I1(i, j)[comp], I2(i, j)[comp]);
                 	float norm_gradI_2 = gradI[comp](i, j) * gradI[comp](i, j);
                 	float lambda_theta_normgradI_2 = rho_ - lambda * theta * norm_gradI_2 ;
 
+
+					W[comp](i, j) = V[comp](i, j);
 					if (rho_ < -1.0 * lambda_theta_normgradI_2 )
 						W[comp](i, j) += lambda * theta * gradI[comp](i, j);
 					else if (rho_ > lambda_theta_normgradI_2 )

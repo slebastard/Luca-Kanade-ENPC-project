@@ -1,3 +1,7 @@
+#ifndef READFLOW_H
+#define READFLOW_H
+
+
 #include <iostream>
 #include <iomanip>
 #include <string>
@@ -44,7 +48,12 @@ bool is_end_message(string message_byte);
 * @param nb_byte le nombre de bytes a lire durant l'operation. 1 byte hexadecimal = 2 bits hexadecimaux = 256 possibilites
 * @return le contenu decimal des bytes lus, si les bytes lus correspondent a de l'hexadecimal
 */
-int get_bytes(istream& stream, int nb_byte = 4);
+float get_bytes(istream& stream, int nb_byte = 4);
+
+/**
+* Convertir un hexadecimal en float
+*/
+float hex2float(string msg);
 
 /**
 * 	right_stream_pos(stream, row, col, width, height):
@@ -72,7 +81,7 @@ bool right_stream_pos(istream& stream, int row, int col, int width, int height);
 * @param path est un chemin absolu ou relatif vers le fichier flo a partir duquel on va calculer le ground_truth du gradient
 * @return le ground_truth du gradient du flot optique
 */
-Image<FVector<float, 2>, 2 > flow_from_flo(string& path);
+Image<FVector<float, 2>, 2 > flow_from_txt(string& path);
 
 /**
 * 	dim_wise_error(ground_truth, flow_estimation, dim):
@@ -120,3 +129,7 @@ Image<float, 2> norm_error(Image<FVector<float, 2>, 2> ground_truth, Image<FVect
 * @return une carte d'erreur d'estimation
 */
 Image<float, 2> error_map(string feature, Image<FVector<float, 2>, 2> ground_truth, Image<FVector<float, 2>, 2> flow_estimation);
+
+
+
+#endif

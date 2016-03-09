@@ -1,3 +1,6 @@
+#ifndef OPTFLOW_H
+#define OPTFLOW_H
+
 /*
 Projet MOPSI : Flux optique
 Loic Cressot  &  Simon Lebastard
@@ -56,12 +59,15 @@ FVector<T, 2> gradient_2D(const Image<T, 2> &V, int i, int j) {
 	// x component
 	gradV[0] = (   ( V(i-1,j-1) + 2*V(i-1,j) + V(i-1,j+1) )*(-1.0)
 			     + ( V(i+1,j-1) + 2*V(i+1,j) + V(i+1,j+1) )
-			   ) / 8.0;
+			   ) ;
 	
 	// y component
 	gradV[1] = (   ( V(i-1,j-1) + 2*V(i,j-1) + V(i+1,j-1) )*(-1.0)
 			     + ( V(i-1,j+1) + 2*V(i,j+1) + V(i+1,j+1) )
-			   ) / 8.0;
+			   ) ;
 
 	return gradV;
 }
+
+
+#endif
