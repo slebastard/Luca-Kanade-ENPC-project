@@ -1,41 +1,44 @@
 #include "readflow.hpp"
+#include "flowcode/Image.h"
+#include "flowcode/flowIO.h"
 
-int hex2dec(string hex_bytes)
-{
-	/**
-		hex2dec(hex_bytes):
-		Transforme un groupement hexadecimal de bytes
-		$hex_byte$ en decimal
-	*/
 
-	int dec_bytes;
-	string hex[4];
-	int dec[4];
-	std::stringstream stream;
-	hex[0] = hex_bytes.substr(0, 2);
-	hex[1] = hex_bytes.substr(2, 2);
-	hex[2] = hex_bytes.substr(4, 2);
-	hex[3] = hex_bytes.substr(6, 2);
+ int hex2dec(string hex_bytes)
+ {
+ 	/**
+ 		hex2dec(hex_bytes):
+ 		Transforme un groupement hexadecimal de bytes
+ 		$hex_byte$ en decimal
+ 	*/
 
-	stream << hex[0];
-	stream >> std::hex >> dec[0];
-	stream.str();
-	stream.clear();
-	stream << hex[1];
-	stream >> std::hex >> dec[1];
-	stream.str();
-	stream.clear();
-	stream << hex[2];
-	stream >> std::hex >> dec[2];
-	stream.str();
-	stream.clear();
-	stream << hex[3];
-	stream >> std::hex >> dec[3];
+ 	int dec_bytes;
+ 	string hex[4];
+ 	int dec[4];
+ 	std::stringstream stream;
+ 	hex[0] = hex_bytes.substr(0, 2);
+ 	hex[1] = hex_bytes.substr(2, 2);
+ 	hex[2] = hex_bytes.substr(4, 2);
+ 	hex[3] = hex_bytes.substr(6, 2);
 
-	dec_bytes = dec[0] * 1 + dec[1] * pow(16, 2) + dec[2] * pow(16, 4) + dec[3] * pow(16, 6);
+ 	stream << hex[0];
+ 	stream >> std::hex >> dec[0];
+ 	stream.str();
+ 	stream.clear();
+ 	stream << hex[1];
+ 	stream >> std::hex >> dec[1];
+ 	stream.str();
+ 	stream.clear();
+ 	stream << hex[2];
+ 	stream >> std::hex >> dec[2];
+ 	stream.str();
+ 	stream.clear();
+ 	stream << hex[3];
+ 	stream >> std::hex >> dec[3];
 
-	return dec_bytes;
-}
+ 	dec_bytes = dec[0] * 1 + dec[1] * pow(16, 2) + dec[2] * pow(16, 4) + dec[3] * pow(16, 6);
+
+ 	return dec_bytes;
+ }
 
 bool is_hexadecimal(string message_bytes)
 {
@@ -48,8 +51,8 @@ bool is_hexadecimal(string message_bytes)
 
 void expand_to_8digits(string& message_byte)
 {
-	while (message_byte.length() < 8)
-		message_byte = message_byte + "0";
+    //message_byte = std::string(8-message_byte.length(), '0') + message_byte;
+    message_byte = message_byte + std::string(8-message_byte.length(), '0');
 }
 
 bool is_end_message(string message_byte)
@@ -58,7 +61,7 @@ bool is_end_message(string message_byte)
 	// A AFFINER
 }
 
-float get_bytes(istream& stream, int nb_byte)
+float get_bytes_float(istream& stream, int nb_byte)
 {
 	/**
 		get_bytes(stream, nb_byte = 4):
@@ -87,12 +90,51 @@ float get_bytes(istream& stream, int nb_byte)
 	return hex2float(message_byte);
 }
 
+
+int get_bytes_int(istream& stream, int nb_byte)
+{
+	/**
+		get_bytes(stream, nb_byte = 4):
+		Lit les $nb_byte$ prochain bytes du fichier lié
+		à $stream$ en partant de la position actuelle du
+		curseur de lecture
+	*/
+	int feed_turns = nb_byte / 2;
+	string current_byte, message_byte = "";
+
+	for (int turn = 0; turn < feed_turns; turn++){
+		stream >> current_byte;
+		message_byte += current_byte;
+	}
+	// SORTIE DE DEBOGUAGE
+	// A decommenter uniquement pour le deboguage
+	// cout << "Digit " << stream.tellg() << ": " << message_byte << endl;
+	if (is_end_message(message_byte))
+		return -1;
+
+	expand_to_8digits(message_byte);
+	if (!is_hexadecimal(message_byte))
+		throw ( "Le contenu a traduire ne correspond pas a de l'hexadecimal" );
+		
+
+	return hex2dec(message_byte);
+}
+
 // hexadecimal to float convertor
 float hex2float(string msg){
   uint32_t num;
   sscanf(msg.c_str(), "%x", &num);
   return *((float*)&num);
 }
+
+
+// hexadecimal to float convertor
+uint32_t hex2int(string msg){
+  uint32_t num;
+  sscanf(msg.c_str(), "%x", &num);
+  return num;
+}
+
 
 bool right_stream_pos(istream& stream, int row, int col, int width, int height)
 {
@@ -112,6 +154,22 @@ bool right_stream_pos(istream& stream, int row, int col, int width, int height)
 }
 
 
+Image<FVector<float, 2>, 2 > flow_from_file(string& path){
+	// Reads image using flowIO code
+	CImageOf<float> img;
+	ReadFlowFile(img, path.c_str());
+	// Then convert it to Image<FVector<float, 2>, 2 >
+	CShape shape = img.Shape();
+	Image<FVector<float, 2>, 2 > V(shape.width, shape.height);
+	for (int i = 0; i < shape.width; i++){
+			for (int j = 0; j < shape.height; j++){
+				V(i,j)[0] = (img.Pixel(i,j,0) < 100.0) ? img.Pixel(i,j,0): 0.0; // take out overflow values
+				V(i,j)[1] = (img.Pixel(i,j,1) < 100.0) ? img.Pixel(i,j,1): 0.0; // take out overflow values
+		}
+	}
+	return V;
+}
+
 Image<FVector<float, 2>, 2 > flow_from_txt(string& path)
 {
 	/**
@@ -128,24 +186,26 @@ Image<FVector<float, 2>, 2 > flow_from_txt(string& path)
 	{
 		int w, h;
 		flow_stream.seekg(9, ios::cur);
-		w = (int)get_bytes(flow_stream);
-		h = (int)get_bytes(flow_stream);
+		w = (int)get_bytes_int(flow_stream);
+		h = (int)get_bytes_int(flow_stream);
 		Image<FVector<float, 2>, 2 > V(w, h);
-		int nb_bytes = (w)* (h)* 8;
+		//int nb_bytes = (w)* (h)* 8;
 
 		for (int row = 0; row < h; row++)
 		{
 			for (int col = 0; col < w; col++)
 			{
-				if (!right_stream_pos(flow_stream, row, col, w, h))	// On vérifie qu'on lit bien les bytes associe a ce pixel
+				if (!right_stream_pos(flow_stream, row, col, w, h))	// On vŽrifie qu'on lit bien les bytes associŽs ˆ ce pixel
 					throw ( "Erreur indicielle durant la lecture du fichier .flo" );
 					
 				// SORTIE DE DEBOGUAGE
 				// A decommenter uniquement pour le deboguage
 				// cout << "Ligne: " << row << " - Colonne: " << col << endl;
 
-				V(col, row)[0] = get_bytes(flow_stream);
-				V(col, row)[1] = get_bytes(flow_stream);				
+				cout << get_bytes_int(flow_stream) << " ";
+                cout << get_bytes_int(flow_stream) << endl;;
+                //DEBUG
+                //cout  << ios::cur << " " << V(col, row)[0] << " " << V(col, row)[1] << " ";
 			}
 		}
 		return V;
@@ -157,7 +217,7 @@ Image<FVector<float, 2>, 2 > flow_from_txt(string& path)
 	}
 }
 
-Image<float, 2> dim_wise_error(Image<FVector<float, 2>, 2> ground_truth, Image<FVector<float, 2>, 2> flow_estimation, int dim)
+Image<float, 2> dim_wise_error(const Image<FVector<float, 2>, 2>& ground_truth, const Image<FVector<float, 2>, 2>& flow_estimation, int dim)
 {
 	/**
 		dim_wise_error(ground_truth, flow_estimation, dim):
@@ -172,17 +232,17 @@ Image<float, 2> dim_wise_error(Image<FVector<float, 2>, 2> ground_truth, Image<F
 		throw ( "Les dimensions des images a comparer ne correspondent pas" );
 		
 
-	Image<float, 2> error;
+	Image<float, 2> error(w,h);
 	if (dim < 0 && dim > 1)
 		throw ( "Dimension de reference invalide pour le calcul de l'erreur" );
 		
-	for (int row = 0; row < h; row++)
-		for (int col = 0; col < w; col++)
-			error(row, col) = abs(ground_truth(row, col)[dim] - flow_estimation(row, col)[dim]);
+	for (int i = 0; i < w; i++)
+		for (int j = 0; j < h; j++)
+			error(i, j) = abs(ground_truth(i, j)[dim] - flow_estimation(i, j)[dim]);
 	return error;
 }
 
-Image<float, 2> norm_error(Image<FVector<float, 2>, 2> ground_truth, Image<FVector<float, 2>, 2> flow_estimation, bool quadratic)
+Image<float, 2> norm_error(const Image<FVector<float, 2>, 2>& ground_truth, const Image<FVector<float, 2>, 2>& flow_estimation)
 {
 	/**
 		norm_error(ground_truth, flow_estimation, quadratic = false):
@@ -199,23 +259,20 @@ Image<float, 2> norm_error(Image<FVector<float, 2>, 2> ground_truth, Image<FVect
 		throw ( "Les dimensions des images a comparer ne correspondent pas" );
 		
 
-	Image<float, 2> error;
-	for (int row = 0; row < h; row++)
-		for (int col = 0; col < w; col++)
-		{
-		error(row, col) = norm2(ground_truth(row, col) - flow_estimation(row, col));
-		if (!quadratic)
-			error(row, col) = sqrt(error(row, col));
-		}
+	Image<float, 2> error(w,h);
+	for (int i = 0; i < w; i++)
+		for (int j = 0; j < h; j++)
+			error(i, j) = norm(ground_truth(i, j) - flow_estimation(i, j));
+
 	return error;
 }
 
-Image<float, 2> error_map(string feature, Image<FVector<float, 2>, 2> ground_truth, Image<FVector<float, 2>, 2> flow_estimation)
+Image<float, 2> error_map(const Image<FVector<float, 2>, 2>& ground_truth, const Image<FVector<float, 2>, 2>& flow_estimation, string mode)
 {
 	/**
-		error_map(feature, ground_truth, flow_estimation):
+		error_map(mode, ground_truth, flow_estimation):
 		Computes an image of error between the $ground_truth$
-		and the $flow_estimation$ based on the specified $feature$
+		and the $flow_estimation$ based on the specified $mode$
 		among	HRZT (horizontal component of gradient vectors)
 		VERT (vertical component of gradient vectors)
 		NORM (euclidian norm of difference)
@@ -229,14 +286,12 @@ Image<float, 2> error_map(string feature, Image<FVector<float, 2>, 2> ground_tru
 		
 
 	Image<float, 2> error_map;
-	if (feature == "HRZT")
+	if (mode == "HRZT")
 		error_map = dim_wise_error(ground_truth, flow_estimation, 0);
-	else if (feature == "VERT")
+	else if (mode == "VERT")
 		error_map = dim_wise_error(ground_truth, flow_estimation, 1);
-	else if (feature == "NORM")
-		error_map = norm_error(ground_truth, flow_estimation, false);
-	else if (feature == "NORM2")
-		error_map = norm_error(ground_truth, flow_estimation, true);
+	else if (mode == "NORM")
+		error_map = norm_error(ground_truth, flow_estimation);
 	else
 		throw ( "Methode renseignee inconnue" );
 		

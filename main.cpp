@@ -39,6 +39,7 @@ Janvier 2016
 
 #include "optflow.hpp"
 #include "readflow.hpp"
+#include "flowcode/flowIO.h"
 
 
 using namespace std;
@@ -46,7 +47,7 @@ using namespace Imagine;
 
 
 void showhelpinfo(string s = "optflow");
-void write_lines_to_txt(const string& file_path, vector<string>& lines);
+void write_lines_to_csv(const string& file_path, vector<string>& lines);
 
 
 
@@ -63,7 +64,7 @@ int main (int argc,char *argv[])
     bool gif_style = false;       // save pictures from 1 to n and then again from n-1 to 1 to make nice .gif image later
     bool gt = false;              // ground truth given ?
     int MAX_RES = 100000;         // Max resolution for images. If reached, images are reduces to this resolution
-    bool test = false;            // Test given method and saves in output dir a .txt file for plotting
+    bool test = false;            // Test given method and saves in output dir a .csv file for plotting
 
     // variable du main
     bool first = true;
@@ -83,7 +84,7 @@ int main (int argc,char *argv[])
         return EXIT_FAILURE;
     }
     // get options
-    while ((tmp = getopt(argc, argv, "hvsgpd:r:o:m:e:t:")) != -1){
+    while ((tmp = getopt(argc, argv, "hvsgpd:r:o:m:e:t")) != -1){
       
       switch (tmp){
         /*option h show the help infomation*/
@@ -123,7 +124,7 @@ int main (int argc,char *argv[])
             ground_truth_path = string(optarg);
             gt = true;
             break;
-        /*option t testing current method (output test_method.txt will appear in output_dir */
+        /*option t testing current method (output test_method.csv will appear in output_dir */
         case 't':
             test=true;
             break;
@@ -208,10 +209,12 @@ int main (int argc,char *argv[])
 
     // CHARGEMENT DES IMAGES
     // ===================================================
-    cout << endl;
-    cout << "==================================================="<<endl;
-    cout << "CHARGEMENT DES IMAGES" << endl;
-    cout << "==================================================="<<endl;
+    if(verbose){
+        cout << endl;
+        cout << "==================================================="<<endl;
+        cout << "CHARGEMENT DES IMAGES" << endl;
+        cout << "==================================================="<<endl;
+    }
     // vector of images
     vector<Image<FVector<float,3>, 2 > > images;
     vector<Image<Color, 2 > > output_image_flow;
@@ -258,41 +261,23 @@ int main (int argc,char *argv[])
     }
 
 
+
     // now load ground truth image
     if(gt){
-      // verify that is is a .txt file
-      if( ground_truth_path.find(".txt")==string::npos ){
-        cout << "Error : ground truth map must be a .txt file !" << endl;
+      // verify that is is a .flo file
+      if( ground_truth_path.find(".flo")==string::npos ){
+        cout << "Error : ground truth map must be a .flo file !" << endl;
         return EXIT_FAILURE;
       }
       // load ground truth map
       try{
-        ground_truth_map = flow_from_txt(ground_truth_path);
+        ground_truth_map = flow_from_file(ground_truth_path);
+        if(verbose) cout << "Ground truth correctly loaded" << endl;
       }
       catch(string e){
           cout << e;
         return EXIT_FAILURE;
       }
-
-      // visualize it
-        // Visualisation
-      Image<Color, 2 > ground_truth_image = make_flow_visible_hsv(ground_truth_map);
-      
-      if(first && print_outputs){
-        openWindow(ground_truth_image.width(), ground_truth_image.height());
-        first=false;
-      }
-      if(print_outputs){
-        display(ground_truth_image);
-        anyClick();
-      }
-
-      for (int i=0; i<ground_truth_image.width(); i++){
-          for (int j=0; j<ground_truth_image.height(); j++){
-            cout << ground_truth_map(i,j) << " ";
-        }
-      }
-      cout << endl;
 
     }
 
@@ -308,12 +293,15 @@ int main (int argc,char *argv[])
 
     // PRETRAITEMENT DES IMAGES
     // ===================================================
-    cout << endl;
-    cout << "==================================================="<<endl;
-    cout << "PRETRAITEMENT DES IMAGES" << endl;
-    cout << "==================================================="<<endl;
+    if(verbose){
+        cout << endl;
+        cout << "==================================================="<<endl;
+        cout << "PRETRAITEMENT DES IMAGES" << endl;
+        cout << "==================================================="<<endl;
+    }
 
     int w = images[0].width(), h = images[0].height();
+    bool has_been_pretraited = false;
 
     // On vérifie que les images ont la même taille et ne sont pas trop grandes auquel cas on les réduit
     for(int i=0; i<images.size(); i++){
@@ -326,11 +314,12 @@ int main (int argc,char *argv[])
         double fact = 1.0*MAX_RES / (images[i].width() * images[i].height());
         if(verbose) cout << "Reducing image n°" << i << endl;
         images[i] = reduce(images[i], 1/fact);
+        has_been_pretraited = true;
       }
 
     }
 
-    // also verify that ground truth image
+    // also verify that ground truth map
     if(gt){
         if(w != ground_truth_map.width() || h != ground_truth_map.height()){
             // Erreur si images de taille différentes
@@ -341,6 +330,24 @@ int main (int argc,char *argv[])
             double fact = 1.0*MAX_RES / (ground_truth_map.width() * ground_truth_map.height());
             if(verbose) cout << "Reducing image ground truth map" << endl;
             ground_truth_map = reduce(ground_truth_map, 1/fact);
+            has_been_pretraited = true;
+      }
+    }
+
+
+    if(!has_been_pretraited && verbose) cout << "None" << endl;
+
+
+    // affichage de la groud_truth
+    if(gt){
+      Image<Color, 2 > ground_truth_image = make_flow_visible_hsv(ground_truth_map);
+      
+      if(first && print_outputs){
+        openWindow(ground_truth_image.width(), ground_truth_image.height());
+        first=false;
+      }
+      if(print_outputs){
+        display(ground_truth_image);
       }
     }
 
@@ -351,16 +358,16 @@ int main (int argc,char *argv[])
 
 
 
-
-
     // TRAITEMENT DES IMAGES
     // ===================================================
-    cout << endl;
-    cout << "==================================================="<<endl;
-    cout << "TRAITEMENT DES IMAGES ..." << endl;
-    cout << "==================================================="<<endl;
+    if(verbose){
+        cout << endl;
+        cout << "==================================================="<<endl;
+        cout << "TRAITEMENT DES IMAGES ..." << endl;
+        cout << "==================================================="<<endl;
+    }
 
-    vector<pair<string, vector<string> > > test_results; // utilisé pour les tests : paires nom de fichier .txt et lignes à écrire dans ce fichier .txt qui pourra ensuite être tracé (Excel, Gnuplot, etc..)
+    vector<pair<string, vector<string> > > test_results; // utilisé pour les tests : paires nom de fichier .csv et lignes à écrire dans ce fichier .csv qui pourra ensuite être tracé (Excel, Gnuplot, etc..)
 
     /*
         procedure normale : on calcule le flot optique pour les couples d'images prises 2 à 2
@@ -370,6 +377,7 @@ int main (int argc,char *argv[])
       for(int i=0; i<images.size()-1; i++){
 
         // Calcul du flow optique
+        // ==============================
         if(verbose) cout << "Processing image n°" << i << endl;
 
         Image<FVector<float,2> ,2 > optical_flow;
@@ -387,9 +395,11 @@ int main (int argc,char *argv[])
       		int max_iter = atoi(method_args[1].c_str());
       		optical_flow = flow_Horn_Schunk_HuberL1(images[i], images[i + 1], max_iter);
       	}
-          
+        // ==============================
+
 
         // Visualisation
+        // ==============================
         Image<Color, 2 > optical_flow_image = make_flow_visible_hsv(optical_flow);
         output_image_flow.push_back(optical_flow_image);
         
@@ -401,91 +411,96 @@ int main (int argc,char *argv[])
           display(optical_flow_image);
           anyClick();
         }
+        // ==============================
+
 
         // Calcul de la map d'erreurs
+        // ==============================
         if(gt){
-
+            Image<float, 2> err_map = error_map(optical_flow, ground_truth_map );
+            //err_map/=100.0; // rescale for not having overflow
+            cout << "error is : " << sum(err_map) << endl;
         }
+        // ==============================
 
       }
     }
 
-
-
     /*
-        procédure de test (nouveau). On teste une méthode pour plusieurs paramètres sur les deux premières images,
-        et on renvoie un fichier .txt pour visualiser une courbe d'erreur en fonction des paramètres
+        procédure de test. On teste une méthode pour plusieurs paramètres sur les deux premières images,
+        et on renvoie un fichier .csv pour visualiser une courbe d'erreur en fonction des paramètres
     */
-
     else{
         Image<FVector<float,2> ,2 > optical_flow; // flow optique à calculer
 
         if(verbose) cout << "Testing method " << method_args[0] << endl;
 
-        // Tester Luka et Kanade
-        if (method_args[0] == "LK"){
-            vector<string> lines;
-            int max_taille_fenetre = 19;
-            // boucler sur la taille des fenêtres
-            for(int taille_fenetre=3; taille_fenetre<=max_taille_fenetre; taille_fenetre+=2){
 
-                if(verbose) cout << "test num " << taille_fenetre << "out of " <<  max_taille_fenetre << endl;
-                optical_flow = flow_Lucas_Kanade(images[0], images[1], taille_fenetre);
-                // TODO:
-                // calculer la carte d'erreur
-                //float sum_error = sum(error_map);
-                float sum_error = 0;
-                lines.push_back( std::to_string(taille_fenetre) + " " + std::to_string(sum_error) );
-            }
-            // add lines to test_results to be written
-            test_results.push_back( pair<string, vector<string> >(output_directory+"/"+"LK_test_taille_fenetre.txt", lines) );
+
+        // Tester Luka et Kanade
+        // ==============================
+        vector<string> lines;
+        int max_taille_fenetre = 19;
+        // boucler sur la taille des fenêtres
+        for(int taille_fenetre=3; taille_fenetre<=max_taille_fenetre; taille_fenetre+=2){
+
+            if(verbose) cout << "test num " << taille_fenetre << " out of " <<  max_taille_fenetre << endl;
+            optical_flow = flow_Lucas_Kanade(images[0], images[1], taille_fenetre);
+            
+            // calculer la carte d'erreur
+            Image<float, 2> err_map = error_map(optical_flow, ground_truth_map );
+            float sum_error = sum(err_map);
+            if(verbose) cout << "LK "<< taille_fenetre<< "  |   error is : " << sum_error << endl << endl;
+            lines.push_back( std::to_string(taille_fenetre) + ";" + std::to_string(sum_error) );
         }
+        // add lines to test_results to be written
+        test_results.push_back( pair<string, vector<string> >(output_directory+"/"+"LK_test_taille_fenetre.csv", lines) );
+        // ==============================
+
+
 
         // Tester Horn et Schunk itératif
-        else if (method_args[0] == "HS"){
-            vector<string> lines;
-            float max_smoothness = 200.0;
-            float max_stop = 1.0;
-            int max_iter = 100;
+        // ==============================
+        vector<string> lines;
+        float max_smoothness = 200.0;
+        float max_stop = 1.0;
+        int max_iter = 100;
 
-            // boucle sur les valeurs de smoothness avec stop fixée
-            for(float smoothness=10.0; smoothness<=max_smoothness; smoothness+=5.0){
+        // boucle sur les valeurs de smoothness avec stop fixée
+        for(float smoothness=10.0; smoothness<=max_smoothness; smoothness+=5.0){
 
-                if(verbose) cout << "test num " << smoothness/10 << "out of " <<  max_smoothness/10 << endl;
-                optical_flow = flow_Horn_Schunk(images[0], images[1], smoothness, 0.1, max_iter);
-                // TODO:
-                // calculer la carte d'erreur
-                //float sum_error = sum(error_map);
-                float sum_error = 0;
-                lines.push_back( std::to_string(smoothness) + " " + std::to_string(sum_error) );
-            }
-            // add lines to test_results to be written later
-            test_results.push_back( pair<string, vector<string> >(output_directory + "/" + "HS_test_smoothness.txt", lines) );
-
-
-            // boucle sur les valeurs de smoothness avec stop fixée
-            lines.clear();
-            int count = 0;
-            for(float stop=0.01; stop<=10.0; stop*=2.0){
-
-                if(verbose) cout << "test num " << count << "out of " <<  std::to_string(13) << endl;
-                optical_flow = flow_Horn_Schunk(images[0], images[1], stop, 0.1, max_iter);
-                // TODO:
-                // calculer la carte d'erreur
-                //float sum_error = sum(error_map);
-                float sum_error = 0;
-                lines.push_back( std::to_string(stop) + " " + std::to_string(sum_error) );
-            }
-            // add lines to test_results to be written later
-            test_results.push_back( pair<string, vector<string> >(output_directory+"/"+"HS_test_stop.txt", lines) );
+            if(verbose) cout << "test num " << smoothness/10 << " out of " <<  max_smoothness/10 << endl;
+            optical_flow = flow_Horn_Schunk(images[0], images[1], smoothness, 0.02, max_iter);
+            
+            // calculer la carte d'erreur
+            Image<float, 2> err_map = error_map(optical_flow, ground_truth_map );
+            float sum_error = sum(err_map);
+            if(verbose) cout << "HS smoothness "<< smoothness << "  |   error is : " << sum_error << endl << endl;
+            lines.push_back( std::to_string(smoothness) + ";" + std::to_string(sum_error) );
         }
+        // add lines to test_results to be written later
+        test_results.push_back( pair<string, vector<string> >(output_directory + "/" + "HS_test_smoothness.csv", lines) );
 
-        else if (method_args[0] == "HSL1"){
-            cout << "Sorry, test procedure not available for HSL1, coming when it'll work !!" << endl;
-            return EXIT_FAILURE;
+        // boucle sur les valeurs de stop avec smoothness fixée
+        lines.clear();
+        int count = 0;
+        for(float stop=0.01; stop<=10.0; stop*=2.0){
+
+            if(verbose) cout << "test num " << count << " out of " <<  std::to_string(13) << endl;
+            optical_flow = flow_Horn_Schunk(images[0], images[1], 10.0, stop, max_iter);
+            // calculer la carte d'erreur
+            Image<float, 2> err_map = error_map(optical_flow, ground_truth_map );
+            float sum_error = sum(err_map);
+            if(verbose) cout << "HS stop "<< stop << "  |   error is : " << sum_error << endl << endl;
+            lines.push_back( std::to_string(stop) + ";" + std::to_string(sum_error) );
         }
+        // add lines to test_results to be written later
+        test_results.push_back( pair<string, vector<string> >(output_directory+"/"+"HS_test_stop.csv", lines) );
+        // ==============================
 
 
+        // Pas encore de tests pour HuberL1 (non fonctionnel)
+        // ==============================
     }
 
 
@@ -546,13 +561,15 @@ int main (int argc,char *argv[])
         }
       }
     }
-    // If test procedure, save txt files
+
+    // If test procedure, save csv files
     if ( test ){
 
         for(vector<pair<string, vector<string> > >::iterator it=test_results.begin();
             it!=test_results.end();
             it++){
-            write_lines_to_txt( it->first , it->second );
+            write_lines_to_csv( it->first , it->second );
+        if(verbose) cout << "Wrote file " << it->first << endl;
         }
 
     }
@@ -586,7 +603,7 @@ void showhelpinfo(string s)
 /*
     writes lines to given file_path
 */
-void write_lines_to_txt(const string& file_path, vector<string>& lines){
+void write_lines_to_csv(const string& file_path, vector<string>& lines){
     ofstream file; // out file stream
     file.open(file_path);
     for(vector<string>::iterator it=lines.begin(); it!=lines.end(); it++){
