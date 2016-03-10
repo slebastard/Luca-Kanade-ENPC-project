@@ -461,12 +461,12 @@ int main (int argc,char *argv[])
 
         // Tester Horn et Schunk itératif
         // ==============================
-        vector<string> lines;
         float max_smoothness = 200.0;
         float max_stop = 1.0;
         int max_iter = 100;
 
         // boucle sur les valeurs de smoothness avec stop fixée
+        lines.clear();
         for(float smoothness=10.0; smoothness<=max_smoothness; smoothness+=5.0){
 
             if(verbose) cout << "test num " << smoothness/10 << " out of " <<  max_smoothness/10 << endl;
