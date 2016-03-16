@@ -12,13 +12,13 @@
 
 
 // return whether flow vector is unknown
-bool unknown_flow(float u, float v);
-bool unknown_flow(float *f);
+bool unknown_flow(double u, double v);
+bool unknown_flow(double *f);
 
 // read a flow file into 2-band image
-void ReadFlowFile(CImageOf<float>& img, const char* filename);
+void ReadFlowFile(CImageOf<double>& img, const char* filename);
 
 // write a 2-band image into flow file 
-void WriteFlowFile(CImageOf<float> img, const char* filename);
+void WriteFlowFile(CImageOf<double> img, const char* filename);
 
 

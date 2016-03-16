@@ -4,24 +4,24 @@
 
 // ".flo" file format used for optical flow evaluation
 //
-// Stores 2-band float image for horizontal (u) and vertical (v) flow components.
-// Floats are stored in little-endian order.
+// Stores 2-band double image for horizontal (u) and vertical (v) flow components.
+// doubles are stored in little-endian order.
 // A flow value is considered "unknown" if either |u| or |v| is greater than 1e9.
 //
 //  bytes  contents
 //
-//  0-3     tag: "PIEH" in ASCII, which in little endian happens to be the float 202021.25
-//          (just a sanity check that floats are represented correctly)
+//  0-3     tag: "PIEH" in ASCII, which in little endian happens to be the double 202021.25
+//          (just a sanity check that doubles are represented correctly)
 //  4-7     width as an integer
 //  8-11    height as an integer
 //  12-end  data (width*height*2*4 bytes total)
-//          the float values for u and v, interleaved, in row order, i.e.,
+//          the double values for u and v, interleaved, in row order, i.e.,
 //          u[row0,col0], v[row0,col0], u[row0,col1], v[row0,col1], ...
 //
 
 
 // first four bytes, should be the same in little endian
-#define TAG_FLOAT 202021.25  // check for this when READING the file
+#define TAG_double 202021.25  // check for this when READING the file
 #define TAG_STRING "PIEH"    // use this when WRITING the file
 
 
@@ -32,18 +32,18 @@
 #include "flowIO.h"
 
 // return whether flow vector is unknown
-bool unknown_flow(float u, float v) {
+bool unknown_flow(double u, double v) {
     return (fabs(u) >  UNKNOWN_FLOW_THRESH) 
 	|| (fabs(v) >  UNKNOWN_FLOW_THRESH)
 	|| isnan(u) || isnan(v);
 }
 
-bool unknown_flow(float *f) {
+bool unknown_flow(double *f) {
     return unknown_flow(f[0], f[1]);
 }
 
 // read a flow file into 2-band image
-void ReadFlowFile(CFloatImage& img, const char* filename)
+void ReadFlowFile(CdoubleImage& img, const char* filename)
 {
     if (filename == NULL)
 	throw CError("ReadFlowFile: empty filename");
@@ -57,14 +57,14 @@ void ReadFlowFile(CFloatImage& img, const char* filename)
         throw CError("ReadFlowFile: could not open %s", filename);
     
     int width, height;
-    float tag;
+    double tag;
 
-    if ((int)fread(&tag,    sizeof(float), 1, stream) != 1 ||
+    if ((int)fread(&tag,    sizeof(double), 1, stream) != 1 ||
 	(int)fread(&width,  sizeof(int),   1, stream) != 1 ||
 	(int)fread(&height, sizeof(int),   1, stream) != 1)
 	throw CError("ReadFlowFile: problem reading file %s", filename);
 
-    if (tag != TAG_FLOAT) // simple test for correct endian-ness
+    if (tag != TAG_double) // simple test for correct endian-ness
 	throw CError("ReadFlowFile(%s): wrong tag (possibly due to big-endian machine?)", filename);
 
     // another sanity check to see that integers were read correctly (99999 should do the trick...)
@@ -78,11 +78,11 @@ void ReadFlowFile(CFloatImage& img, const char* filename)
     CShape sh(width, height, nBands);
     img.ReAllocate(sh);
 
-    //printf("reading %d x %d x 2 = %d floats\n", width, height, width*height*2);
+    //printf("reading %d x %d x 2 = %d doubles\n", width, height, width*height*2);
     int n = nBands * width;
     for (int y = 0; y < height; y++) {
-	float* ptr = &img.Pixel(0, y, 0);
-	if ((int)fread(ptr, sizeof(float), n, stream) != n)
+	double* ptr = &img.Pixel(0, y, 0);
+	if ((int)fread(ptr, sizeof(double), n, stream) != n)
 	    throw CError("ReadFlowFile(%s): file is too short", filename);
     }
 
@@ -93,7 +93,7 @@ void ReadFlowFile(CFloatImage& img, const char* filename)
 }
 
 // write a 2-band image into flow file 
-void WriteFlowFile(CFloatImage img, const char* filename)
+void WriteFlowFile(CdoubleImage img, const char* filename)
 {
     if (filename == NULL)
 	throw CError("WriteFlowFile: empty filename");
@@ -124,8 +124,8 @@ void WriteFlowFile(CFloatImage img, const char* filename)
     // write the rows
     int n = nBands * width;
     for (int y = 0; y < height; y++) {
-	float* ptr = &img.Pixel(0, y, 0);
-	if ((int)fwrite(ptr, sizeof(float), n, stream) != n)
+	double* ptr = &img.Pixel(0, y, 0);
+	if ((int)fwrite(ptr, sizeof(double), n, stream) != n)
 	    throw CError("WriteFlowFile(%s): problem writing data", filename); 
    }
 
@@ -138,7 +138,7 @@ int main() {
 
     try {
 	CShape sh(5, 1, 2);
-	CFloatImage img(sh);
+	CdoubleImage img(sh);
 	img.ClearPixels();
 	img.Pixel(0, 0, 0) = -5.0f;
 	char *filename = "test.flo";

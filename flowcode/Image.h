@@ -10,7 +10,7 @@
 //
 //  The templated CImageOf<T> classes are used to create strongly typed images.
 //  The currently supported pixel types are:
-//      unsigned char, int, and float.
+//      unsigned char, int, and double.
 //
 //  The images can have an arbitrary width, height, and also an arbitrary
 //  number of bands (channels) per pixel.  For example, traditional RGBA
@@ -26,7 +26,7 @@
 //  Image.cpp           implementation
 //  RefCntMem.h         reference-counted memory object used by CImage
 //
-// Copyright © Richard Szeliski, 2001.
+// Copyright ï¿½ Richard Szeliski, 2001.
 // See Copyright.h for more details
 //
 ///////////////////////////////////////////////////////////////////////////
@@ -62,7 +62,7 @@ struct CError : public exception
 {
     CError(const char* msg)                 { strcpy(message, msg); }
     CError(const char* fmt, int d)          { sprintf(message, fmt, d); }
-    CError(const char* fmt, float f)        { sprintf(message, fmt, f); }
+    CError(const char* fmt, double f)        { sprintf(message, fmt, f); }
     CError(const char* fmt, const char *s)  { sprintf(message, fmt, s); }
     CError(const char* fmt, const char *s,
            int d)                          { sprintf(message, fmt, s, d); }
@@ -256,7 +256,7 @@ inline void CImageOf<T>::ClearPixels(void)
 
 typedef CImageOf<uchar> CByteImage;
 typedef CImageOf<int>   CIntImage;
-typedef CImageOf<float> CFloatImage;
+typedef CImageOf<double> CdoubleImage;
 
 // Color pixel support
 

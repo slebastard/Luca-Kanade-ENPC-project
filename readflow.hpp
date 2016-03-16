@@ -13,124 +13,85 @@ using namespace std;
 #include "Imagine/Common.h"
 using namespace Imagine;
 
+
 /**
-* Transforme un groupement hexadecimal de bytes
-* $hex_byte$ en decimal
-* @param hex_byte la chaine de caractere representant lhexadecimal a traduire
-* @return nombre decimal traduit
+* Lit le fichier .flo indique par le chemin $path$, fabrique et retourne une carte de gradient theorique a partir
+* du code hexadecimal du fichier en utilisant une fonction annexe de lecture de fichiers .flo donnée sur Middleburry
 */
-//int hex2dec(string hex_byte);
+Image<FVector<double, 2>, 2 > flow_from_file(string& path);
+
+
+// TOUTES LES FONCTIONS QUI SUIVENT NE SONT PAS UTILISEES CAR ELLES CONTIENNENT DES ERREURS
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+
+/**
+* Transforme un groupement hexadecimal de bytes en int
+*/
+int hex2dec(string hex_byte);
 
 /**
 * Verifie si la string $message_bytes$ correspond a un code hexadecimal valide
-* @param message_bytes la chaine de caractere representant l'hexadecimal a inspecter
-* @return true si le nombre examine correspond a priori a un code hexadecimal valide, false sinon
 */
 bool is_hexadecimal(string message_bytes);
 
 /**
 * Etend la string $message_byte$ dans le cas ou celle-ci fait moins de 8 caracteres
-* @param message_byte la chaine de caractere representant le message hexadecimal a completer par des 0
 */
 void expand_to_8digits(string& message_byte);
 
 /**
 * Verifie si le message message_byte recupere correspond a un code de fin de lecture
-* @param message_byte la chaine de caractere representant l'hexadecimal a examiner
 */
 bool is_end_message(string message_byte);
 
 /**
-* Lit les $nb_byte$ prochain bytes du fichier lié
-* à $stream$ en partant de la position actuelle du
+* Lit les $nb_byte$ prochain bytes du fichier lié à $stream$ en partant de la position actuelle du
 * curseur de lecture
-* @param stream doit etre un ifstream pointant sur le fichier sur lequel on va lire les bytes
-* @param nb_byte le nombre de bytes a lire durant l'operation. 1 byte hexadecimal = 2 bits hexadecimaux = 256 possibilites
-* @return le contenu decimal des bytes lus, si les bytes lus correspondent a de l'hexadecimal
 */
-float get_bytes_float(istream& stream, int nb_byte = 4);
+double get_bytes_double(istream& stream, int nb_byte = 4);
 int get_bytes_int(istream& stream, int nb_byte = 4);
 
 /**
-* Convertir un hexadecimal en float
+* Convertir un hexadecimal en double
 */
-float hex2float(string msg);
+double hex2double(string msg);
 uint32_t hex2int(string msg);
 
 
 /**
-* 	right_stream_pos(stream, row, col, width, height):
-*	- Verifie que la position du curseur associe a $stream$
-*	est coherente avec la position dans l'image ($row$
-*	et $col$ renseignees)
-*	- Verifie que la position dans l'image satisfait les
-*	dimensions $width$ et $height$ de l'image
-* @param stream doit etre un ifstream pointant sur le fichier sur lequel on va lire les bytes
-* @param row la ligne correspondant au pixel dont on souhaite verifier la correspondance
-* @param col la colonne correspondant au pixel dont on souhaite verifier la correspondance
-* @param width la largeur de l'image a examiner
-* @param height la hauteur de l'image a examiner
-* @return true si la position de lecture correspond, false sinon
+*	- Verifie que la position du curseur associe a $stream$ est coherente avec la position dans l'image ($row$ et $col$ renseignees)
+*	- Verifie que la position dans l'image satisfait les dimensions $width$ et $height$ de l'image
 */
 bool right_stream_pos(istream& stream, int row, int col, int width, int height);
 
 /**
-* 	flow_from_flo(path):
-* Lit le fichier .flo indique par le chemin $path$,
-* fabrique et retourne une carte de gradient theorique
-* a partir du code hexadecimal du fichier. Pour obtenir
-* les conventions de codage du fichier .flo, se referrer
-* a la documentation Middlebury
-* @param path est un chemin absolu ou relatif vers le fichier flo a partir duquel on va calculer le ground_truth du gradient
-* @return le ground_truth du gradient du flot optique
+* Lit le fichier .flo indique par le chemin $path$, fabrique et retourne une carte de gradient theorique a partir
+* du code hexadecimal du fichier. Pour obtenir les conventions de codage du fichier .flo, se referrer a la documentation Middlebury
 */
-Image<FVector<float, 2>, 2 > flow_from_txt(string& path);
-Image<FVector<float, 2>, 2 > flow_from_file(string& path);
+Image<FVector<double, 2>, 2 > flow_from_txt(string& path);
 
 /**
-* 	dim_wise_error(ground_truth, flow_estimation, dim):
-* Computes an image of error between the $ground_truth$
-* and the $flow_estimation$ based on their local difference
-* on the $dim$ dimension
-* @param ground_truth est la carte de vitesse reelle selon Middlebury
-* @param flow_estimation est l'estimation de l'erreur produite a exteriori
-* @param dim est la diemnsions selon laquelle on calcule l'erreur d'estimation
-* @see error_map pour l'implementation de cette fonction a la generation d'une carte d'erreur
-* @return une carte d'erreur d'estimation
+* Computes an image of error between the $ground_truth$ and the $flow_estimation$ based on their local difference on the $dim$ dimension
 */
-Image<float, 2> dim_wise_error(const Image<FVector<float, 2>, 2>& ground_truth,const Image<FVector<float, 2>, 2>& flow_estimation, int dim);
+Image<double, 2> dim_wise_error(const Image<FVector<double, 2>, 2>& ground_truth,const Image<FVector<double, 2>, 2>& flow_estimation, int dim);
 
 /**
-* 	norm_error(ground_truth, flow_estimation, quadratic):
 * Computes an image of error between the $ground_truth$
-* and the $flow_estimation$ based on their local difference
-* regarding the euclidian norm.
-
-* @param ground_truth est la carte de vitesse reelle selon Middlebury
-* @param flow_estimation est l'estimation de l'erreur produite a exteriori
-* @see error_map pour l'implementation de cette fonction a la generation d'une carte d'erreur
-* @return une carte d'erreur d'estimation
+* and the $flow_estimation$ based on their local difference regarding the euclidian norm.
 */
-Image<float, 2> norm_error(const Image<FVector<float, 2>, 2>& ground_truth, const Image<FVector<float, 2>, 2>& flow_estimation);
+Image<double, 2> norm_error(const Image<FVector<double, 2>, 2>& ground_truth, const Image<FVector<double, 2>, 2>& flow_estimation);
 
 /**
-* error_map(ground_truth, flow_estimation, mode):
-* Computes an image of error between the $ground_truth$
-* and the $flow_estimation$ based on the specified $mode$
-* among	HRZT (horizontal component of gradient vectors)
-*		VERT (vertical component of gradient vectors)
-*		NORM (euclidian norm of difference)
-*		NORM2 (square of euclidian norm of difference)
-* @mode est le mode selon lequel on va calculer la carte d'erreur:
-*		HRZT (horizontal component of gradient vectors)
-*		VERT (vertical component of gradient vectors)
-*		NORM (euclidian norm of difference)
-*		NORM2 (square of euclidian norm of difference)
-* @param ground_truth est la carte de vitesse reelle selon Middlebury
-* @param flow_estimation est l'estimation de
-* @return une carte d'erreur d'estimation
+* Computes an image of error between the $ground_truth$ and the $flow_estimation$ based on the specified $mode$
 */
-Image<float, 2> error_map(const Image<FVector<float, 2>, 2>& ground_truth, const Image<FVector<float, 2>, 2>& flow_estimation, string mode = "NORM");
+Image<double, 2> error_map(const Image<FVector<double, 2>, 2>& ground_truth, const Image<FVector<double, 2>, 2>& flow_estimation, string mode = "NORM");
 
 
 

@@ -172,5 +172,5 @@ template <> uchar CImageOf<uchar>::MinVal(void)     { return 0; }
 template <> uchar CImageOf<uchar>::MaxVal(void)     { return 255; }
 template <> int   CImageOf<int  >::MinVal(void)     { return 0x80000000; }
 template <> int   CImageOf<int  >::MaxVal(void)     { return 0x7fffffff; }
-template <> float CImageOf<float>::MinVal(void)     { return -FLT_MAX; }
-template <> float CImageOf<float>::MaxVal(void)     { return FLT_MAX; }
+template <> double CImageOf<double>::MinVal(void)     { return -FLT_MAX; }
+template <> double CImageOf<double>::MaxVal(void)     { return FLT_MAX; }

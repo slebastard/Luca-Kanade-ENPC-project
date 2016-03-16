@@ -54,17 +54,17 @@ void write_lines_to_csv(const string& file_path, vector<string>& lines);
 int main (int argc,char *argv[])
 {
     // Variables d'options
-    string directory("");         // stores input dir
-    string output_directory("");  // stores output dir
-    string ground_truth_path(""); // stores path to ground_truth file
-    vector<string> method_args;   // stores args provided for options -m (method) between ""
+    string directory("");         // Dossier d'inputs
+    string output_directory("");  // Dossier d'outputs
+    string ground_truth_path(""); // Chemin vers la ground_truth_map
+    vector<string> method_args;   // arguments pour l'option -m (method) à écrire entre ""
     bool verbose = false;         // verbose
-    bool save_outputs = false;    // save image outputs to output dir
-    bool print_outputs = false;   // print_outputs on screen
-    bool gif_style = false;       // save pictures from 1 to n and then again from n-1 to 1 to make nice .gif image later
-    bool gt = false;              // ground truth given ?
-    int MAX_RES = 100000;         // Max resolution for images. If reached, images are reduces to this resolution
-    bool test = false;            // Test given method and saves in output dir a .csv file for plotting
+    bool save_outputs = false;    // sauvegarder les images
+    bool print_outputs = false;   // afficher les images
+    bool gif_style = false;       // Sauvegarder les images aussi en ordre inverse pour faire de beaux .gif
+    bool gt = false;              // Ground truth donnée ou non
+    int MAX_RES = 100000;         // Résolution max pour les images, si atteinte, les images sont réduites en prétraitement
+    bool test = false;            // Permet de tester les méthodes et écrit un fichier .csv pour tracer des courbes
 
     // variable du main
     bool first = true;
@@ -73,63 +73,61 @@ int main (int argc,char *argv[])
 
 
 
-
-
-    // PROCESS ARGUMENTS
+    // TRAITEMENT DES OPTIONS PASSEES SUR LA LIGNE DE COMMANDE
     // ===================================================
     char tmp;
-    /*if the program is ran without options ,it will show the usgage and exit*/
+    // Si pas d'option, afficher l'aide et uitter
     if(argc == 1){
         showhelpinfo(string(argv[0]));
         return EXIT_FAILURE;
     }
-    // get options
+    
     while ((tmp = getopt(argc, argv, "hvsgpd:r:o:m:e:t")) != -1){
       
       switch (tmp){
-        /*option h show the help infomation*/
+        /* Option h affiche l'aide */
         case 'h':
             showhelpinfo(string(argv[0]));
             break;
-        /*option v for verbose*/
+        /* Option v pour verbose*/
         case 'v':
             verbose = true;
             break;
-        /*option s for save*/
+        /* Option s pour sauvegarder */
         case 's':
             save_outputs = true;
             break;
-        /*option s for save*/
+        /* Option r pour la resolution max */
         case 'r':
             MAX_RES = atoi(optarg);
             break;
-        /*option o for output dir*/
+        /* Option o pour le dossier d'outputs */
         case 'o':
             output_directory = string(optarg);
             break;
-        /*option g for gif style format : output are saved from 0 to n then again from n-1 to 0 to make a double sens giff*/
+        /* Option g pour enregistre aussi les images en sens inverse pour faire de beaux .gif */
         case 'g':
             gif_style = true;
             break;
-        /*option p for print_outputs*/
+        /* Option p pour afficher les images */
         case 'p':
             print_outputs = true;
             break;
-        /*option d asks for directory*/
+        /* Option d pour le dossier d'inputs */
         case 'd':
             directory = string(optarg);
             break;
-        /*option e for error estimation with given */
+        /* Option e pour l'emplacement de la ground_truth_map (.flo) */
         case 'e':
             ground_truth_path = string(optarg);
             gt = true;
             break;
-        /*option t testing current method (output test_method.csv will appear in output_dir */
+        /* Option t pour lancer les tests */
         case 't':
             test=true;
             break;
         break;
-        /*option m asks for method args*/
+        /* Option m pour spécifier une méthode de calcul de flux optique */
         case 'm':
         {
             istringstream iss(optarg);
@@ -143,9 +141,9 @@ int main (int argc,char *argv[])
       }
     }
 
-    // verify options
+    // On vérifie les options passées
 
-    //directory
+    // directory
     if(directory==""){
         cout << "Input directory option required (-d) !" << endl;
         return EXIT_FAILURE;
@@ -154,35 +152,35 @@ int main (int argc,char *argv[])
         output_directory = directory + "/outputs";
     }
 
-    // save outputs
+    // save_outputs
     if(!save_outputs) print_outputs = true;
 
     // method
-    if(method_args.size()==0){
+    if(!test && method_args.size()==0){
         cout << "Method option required !" << endl;
         return EXIT_FAILURE;
     }
 
-    if (method_args[0] != "LK" && method_args[0] != "HS" && method_args[0] != "HSL1"){
+    if (!test && method_args[0] != "LK" && method_args[0] != "HS" && method_args[0] != "HSL1"){
         cout << "Unknown method : " << method_args[0] << endl;
         showhelpinfo();
         return EXIT_FAILURE;
     }
-    if(method_args[0]=="LK"){
+    if(!test && method_args[0]=="LK"){
       if(method_args.size()!=2){
         cout << "Incorrect args number for LK method ! " << endl;
         showhelpinfo();
         return EXIT_FAILURE;
       }
     }
-    else if(method_args[0]=="HS"){
+    else if(!test && method_args[0]=="HS"){
       if(method_args.size()!=4){
         cout << "Incorrect args number for HS method ! " << endl;
         showhelpinfo();
         return EXIT_FAILURE;
       }
     }
-    else if (method_args[0] == "HSL1"){
+    else if (!test && method_args[0] == "HSL1"){
     	if (method_args.size() != 2){
     		cout << "Incorrect args number for HSL1 method ! " << endl;
         showhelpinfo();
@@ -190,7 +188,7 @@ int main (int argc,char *argv[])
     	}
     }
 
-    // error evaluation : ground truth loading
+    // Chargement de la ground_truth
     if(gt && ground_truth_path==""){
       cout << "Ground truth map required (after -e) !" << endl;
     }
@@ -212,32 +210,31 @@ int main (int argc,char *argv[])
     if(verbose){
         cout << endl;
         cout << "==================================================="<<endl;
-        cout << "CHARGEMENT DES IMAGES" << endl;
+        cout << "LOADING IMAGES" << endl;
         cout << "==================================================="<<endl;
     }
-    // vector of images
-    vector<Image<FVector<float,3>, 2 > > images;
+    // Vecteur d'images
+    vector<Image<FVector<double,3>, 2 > > images;
     vector<Image<Color, 2 > > output_image_flow;
-    vector<Image<float, 2 > > output_error_map;
-    Image<FVector<float, 2>, 2 > ground_truth_map;
+    vector<Image<double, 2 > > output_error_map;
+    Image<FVector<double, 2>, 2 > ground_truth_map;
 
-    //open directory and load images
+    // Ouvre le dossier d'inputs et charge les images
     DIR *dir;
     struct dirent *ent;
     if ((dir = opendir (directory.c_str())) != NULL) {
-    /* print all the files and directories within directory */
+    // Affiche les fichiers trouvés
         int count = 1;
         while ((ent = readdir (dir)) != NULL) {
-            //printf ("%s\n", ent->d_name);
             string name(ent->d_name);
-            // look for supported formats
+            // Recherche des formats png jpg et tiff
             if(name.find(".png")!=string::npos || name.find(".jpg")!=string::npos || name.find(".tiff")!=string::npos ){
                 Image<Color> I;
                 if(!load(I, directory + "/" + name)){
                     cout << string("Couldn't load image : ") + name << endl;
                     return EXIT_FAILURE;
                 }
-                Image<FVector<float,3> > Iv(I);
+                Image<FVector<double,3> > Iv(I);
                 images.push_back(Iv);
                 if(verbose) cout << "Image correctly loaded : " << name << endl;
                 if(test && count++==2) break; // if test procedure, we only need the two first images
@@ -249,7 +246,6 @@ int main (int argc,char *argv[])
         closedir (dir);
     }
     else {
-    /* could not open directory */
         cout << string("Could not open directory ") + directory << endl;
         return EXIT_FAILURE;
     }
@@ -262,14 +258,14 @@ int main (int argc,char *argv[])
 
 
 
-    // now load ground truth image
+    // On charge la ground_truth si demandé
     if(gt){
-      // verify that is is a .flo file
+      // Vérifier qu'il s'agit d'un .flo
       if( ground_truth_path.find(".flo")==string::npos ){
         cout << "Error : ground truth map must be a .flo file !" << endl;
         return EXIT_FAILURE;
       }
-      // load ground truth map
+      // charger la ground_truth
       try{
         ground_truth_map = flow_from_file(ground_truth_path);
         if(verbose) cout << "Ground truth correctly loaded" << endl;
@@ -312,14 +308,14 @@ int main (int argc,char *argv[])
       if(images[i].width() * images[i].height() > MAX_RES){
         // Rescale si on depasse la resolution maximale
         double fact = 1.0*MAX_RES / (images[i].width() * images[i].height());
-        if(verbose) cout << "Reducing image n°" << i << endl;
+        if(verbose) cout << "Reduction de l'image n°" << i << endl;
         images[i] = reduce(images[i], 1/fact);
         has_been_pretraited = true;
       }
 
     }
 
-    // also verify that ground truth map
+    // Verifier aussi la ground truth map
     if(gt){
         if(w != ground_truth_map.width() || h != ground_truth_map.height()){
             // Erreur si images de taille différentes
@@ -328,7 +324,7 @@ int main (int argc,char *argv[])
         if(ground_truth_map.width() * ground_truth_map.height() > MAX_RES){
             // Rescale si on depasse la resolution maximale
             double fact = 1.0*MAX_RES / (ground_truth_map.width() * ground_truth_map.height());
-            if(verbose) cout << "Reducing image ground truth map" << endl;
+            if(verbose) cout << "Réduction de la ground truth map" << endl;
             ground_truth_map = reduce(ground_truth_map, 1/fact);
             has_been_pretraited = true;
       }
@@ -338,7 +334,7 @@ int main (int argc,char *argv[])
     if(!has_been_pretraited && verbose) cout << "None" << endl;
 
 
-    // affichage de la groud_truth
+    // Affichage de la groud_truth
     if(gt){
       Image<Color, 2 > ground_truth_image = make_flow_visible_hsv(ground_truth_map);
       
@@ -378,16 +374,16 @@ int main (int argc,char *argv[])
 
         // Calcul du flow optique
         // ==============================
-        if(verbose) cout << "Processing image n°" << i << endl;
+        if(verbose) cout << "Traitement de l'image n°" << i << endl;
 
-        Image<FVector<float,2> ,2 > optical_flow;
+        Image<FVector<double,2> ,2 > optical_flow;
       	if (method_args[0] == "LK"){
-      		int taille_fenetre = atoi(method_args[1].c_str());    // Ne marche pas pour le moment car la taille de la fenêtre doit être fixé avant compilation, ici 7 (cf FVector)
+      		int taille_fenetre = atoi(method_args[1].c_str());
       		optical_flow = flow_Lucas_Kanade(images[i], images[i + 1], taille_fenetre);
       	}
       	else if (method_args[0] == "HS"){
-      		float smoothness = atof(method_args[1].c_str());
-      		float stop = atof(method_args[2].c_str());
+      		double smoothness = atof(method_args[1].c_str());
+      		double stop = atof(method_args[2].c_str());
       		int max_iter = atoi(method_args[3].c_str());
       		optical_flow = flow_Horn_Schunk(images[i], images[i + 1], smoothness, stop, max_iter);
       	}
@@ -417,9 +413,9 @@ int main (int argc,char *argv[])
         // Calcul de la map d'erreurs
         // ==============================
         if(gt){
-            Image<float, 2> err_map = error_map(optical_flow, ground_truth_map );
+            Image<double, 2> err_map = error_map(optical_flow, ground_truth_map );
             //err_map/=100.0; // rescale for not having overflow
-            cout << "error is : " << sum(err_map) << endl;
+            cout << "Difference avec la ground_truth : " << sum(err_map) << endl;
         }
         // ==============================
 
@@ -431,9 +427,9 @@ int main (int argc,char *argv[])
         et on renvoie un fichier .csv pour visualiser une courbe d'erreur en fonction des paramètres
     */
     else{
-        Image<FVector<float,2> ,2 > optical_flow; // flow optique à calculer
+        Image<FVector<double,2> ,2 > optical_flow; // flow optique à calculer
 
-        if(verbose) cout << "Testing method " << method_args[0] << endl;
+        if(verbose) cout << "Méthode testée : " << method_args[0] << endl;
 
 
 
@@ -444,58 +440,43 @@ int main (int argc,char *argv[])
         // boucler sur la taille des fenêtres
         for(int taille_fenetre=3; taille_fenetre<=max_taille_fenetre; taille_fenetre+=2){
 
-            if(verbose) cout << "test num " << taille_fenetre << " out of " <<  max_taille_fenetre << endl;
+            if(verbose) cout << "test numéro " << taille_fenetre << " sur " <<  max_taille_fenetre << endl;
             optical_flow = flow_Lucas_Kanade(images[0], images[1], taille_fenetre);
             
             // calculer la carte d'erreur
-            Image<float, 2> err_map = error_map(optical_flow, ground_truth_map );
-            float sum_error = sum(err_map);
-            if(verbose) cout << "LK "<< taille_fenetre<< "  |   error is : " << sum_error << endl << endl;
+            Image<double, 2> err_map = error_map(optical_flow, ground_truth_map );
+            double sum_error = sum(err_map);
+            if(verbose) cout << "LK "<< taille_fenetre<< "  |   erreur : " << sum_error << endl << endl;
             lines.push_back( std::to_string(taille_fenetre) + ";" + std::to_string(sum_error) );
         }
-        // add lines to test_results to be written
+        // Ajouter les lignes à écrire à test_results
         test_results.push_back( pair<string, vector<string> >(output_directory+"/"+"LK_test_taille_fenetre.csv", lines) );
         // ==============================
 
 
-
         // Tester Horn et Schunk itératif
         // ==============================
-        float max_smoothness = 200.0;
-        float max_stop = 1.0;
+        double max_smoothness = 10.0f;
+        double max_stop = 0.2f;
         int max_iter = 100;
 
-        // boucle sur les valeurs de smoothness avec stop fixée
-        lines.clear();
-        for(float smoothness=10.0; smoothness<=max_smoothness; smoothness+=5.0){
-
-            if(verbose) cout << "test num " << smoothness/10 << " out of " <<  max_smoothness/10 << endl;
-            optical_flow = flow_Horn_Schunk(images[0], images[1], smoothness, 0.02, max_iter);
-            
-            // calculer la carte d'erreur
-            Image<float, 2> err_map = error_map(optical_flow, ground_truth_map );
-            float sum_error = sum(err_map);
-            if(verbose) cout << "HS smoothness "<< smoothness << "  |   error is : " << sum_error << endl << endl;
-            lines.push_back( std::to_string(smoothness) + ";" + std::to_string(sum_error) );
-        }
-        // add lines to test_results to be written later
-        test_results.push_back( pair<string, vector<string> >(output_directory + "/" + "HS_test_smoothness.csv", lines) );
-
-        // boucle sur les valeurs de stop avec smoothness fixée
+        // Boucle sur les valeurs de smoothness avec stop fixé
         lines.clear();
         int count = 0;
-        for(float stop=0.01; stop<=10.0; stop*=2.0){
+        for(double smoothness=0.5; smoothness<=max_smoothness; smoothness+=0.5){
+            for(double stop=0.001; stop<=max_stop; stop*=2.0){
 
-            if(verbose) cout << "test num " << count << " out of " <<  std::to_string(13) << endl;
-            optical_flow = flow_Horn_Schunk(images[0], images[1], 10.0, stop, max_iter);
-            // calculer la carte d'erreur
-            Image<float, 2> err_map = error_map(optical_flow, ground_truth_map );
-            float sum_error = sum(err_map);
-            if(verbose) cout << "HS stop "<< stop << "  |   error is : " << sum_error << endl << endl;
-            lines.push_back( std::to_string(stop) + ";" + std::to_string(sum_error) );
+                if(verbose) cout << "test numéro " << count++ << " sur " <<  std::to_string((int)13 * max_smoothness/10) << endl;
+                optical_flow = flow_Horn_Schunk(images[0], images[1], smoothness, stop, max_iter);
+                // calculer la carte d'erreur
+                Image<double, 2> err_map = error_map(optical_flow, ground_truth_map );
+                double sum_error = sum(err_map);
+                if(verbose) cout << "HS smoothness " <<  smoothness << " & stop "<< stop << "  |   erreur : " << sum_error << endl << endl;
+                lines.push_back( std::to_string(smoothness) + ";" + std::to_string(stop) + ";" + std::to_string(sum_error) );
+            }
         }
-        // add lines to test_results to be written later
-        test_results.push_back( pair<string, vector<string> >(output_directory+"/"+"HS_test_stop.csv", lines) );
+        // Ajouter les lignes à écrire à test_results
+        test_results.push_back( pair<string, vector<string> >(output_directory+"/"+"HS_test.csv", lines) );
         // ==============================
 
 
@@ -544,15 +525,15 @@ int main (int argc,char *argv[])
     if( save_outputs ){
 
       if(verbose) cout << "Saving images to " + output_directory << endl;
-      int n_dec = int(log10(output_image_flow.size()) + 1); // number of decimal to use for number in name
-      char* num = new char[n_dec]; // tableau contenant le numéro  de l'image en chaine de caractères
+      int n_dec = int(log10(output_image_flow.size()) + 1);
+      char* num = new char[n_dec]; // tableau contenant le numéro de l'image en chaine de caractères
       for(int i=0; i<output_image_flow.size(); i++){
         cout << "saving " << "/output_" << to_string(i) << ".jpg" << endl;
           
         sprintf(num, (string("%0"+to_string(n_dec)+"d")).c_str(), i);
         save(output_image_flow[i], output_directory + "/output_" + num +".jpg");
       }
-      if(gif_style){ // save als in reverse for making a nice .gif image
+      if(gif_style){ // si option -g spécifiée
         int j=output_image_flow.size();
         for(int i=output_image_flow.size()-1; i>=0; i--){ 
           cout << "saving " << "output_" << to_string(j) << ".png" << endl;
@@ -562,7 +543,7 @@ int main (int argc,char *argv[])
       }
     }
 
-    // If test procedure, save csv files
+    // Si procédure de test, sauvegarder les résultats en .csv
     if ( test ){
 
         for(vector<pair<string, vector<string> > >::iterator it=test_results.begin();
@@ -580,7 +561,7 @@ return EXIT_SUCCESS;
 
 
 /*
-    fonction that shows the help information
+    Fonction d'aide
 */
 void showhelpinfo(string s)
 {
@@ -601,7 +582,7 @@ void showhelpinfo(string s)
 
 
 /*
-    writes lines to given file_path
+    Ecrit des lignes dans un fichier csv
 */
 void write_lines_to_csv(const string& file_path, vector<string>& lines){
     ofstream file; // out file stream
