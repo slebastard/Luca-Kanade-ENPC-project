@@ -4,10 +4,13 @@
 
 
 
-// Seule méthode utilisée car les autres contiennent des erreurs. Nous avons donc opté pour utiliser
-// 	la fonction de chargement de ground_truth map à partir de fichier .flo fournie sur MiddleBurry
+// Seules methode utilisees car les autres contiennent des erreurs. Nous avons donc opte pour utiliser
+// 	la fonction de chargement de ground_truth map a partir de fichier .flo fournie sur MiddleBurry
+
+
 Image<FVector<double, 2>, 2 > flow_from_file(string& path){
-	// Reads image using flowIO code
+	
+    // Reads image using flowIO code
 	CImageOf<double> img;
 	ReadFlowFile(img, path.c_str());
 	// Then convert it to Image<FVector<double, 2>, 2 >
@@ -21,6 +24,74 @@ Image<FVector<double, 2>, 2 > flow_from_file(string& path){
 	}
 	return V;
 }
+
+
+
+Image<double, 2> error_map(const Image<FVector<double, 2>, 2>& ground_truth, const Image<FVector<double, 2>, 2>& flow_estimation, string mode)
+{
+   
+    int w = ground_truth.width();
+    int h = ground_truth.height();
+    
+    if (flow_estimation.width() != w || flow_estimation.height() != h)
+        throw ( "Les dimensions des images a comparer ne correspondent pas" );
+    
+    
+    Image<double, 2> error_map;
+    if (mode == "HRZT")
+        error_map = dim_wise_error(ground_truth, flow_estimation, 0);
+    else if (mode == "VERT")
+        error_map = dim_wise_error(ground_truth, flow_estimation, 1);
+    else if (mode == "NORM")
+        error_map = norm_error(ground_truth, flow_estimation);
+    else
+        throw ( "Methode renseignee inconnue" );
+    
+    
+    return error_map;
+}
+
+
+ Image<double, 2> norm_error(const Image<FVector<double, 2>, 2>& ground_truth, const Image<FVector<double, 2>, 2>& flow_estimation)
+ {
+ 	
+ 	int w = ground_truth.width();
+ 	int h = ground_truth.height();
+
+ 	if (flow_estimation.width() != w || flow_estimation.height() != h)
+ 		throw ( "Les dimensions des images a comparer ne correspondent pas" );
+
+
+ 	Image<double, 2> error(w,h);
+ 	for (int i = 0; i < w; i++)
+ 		for (int j = 0; j < h; j++)
+ 			error(i, j) = norm(ground_truth(i, j) - flow_estimation(i, j));
+
+ 	return error;
+ }
+
+
+
+ Image<double, 2> dim_wise_error(const Image<FVector<double, 2>, 2>& ground_truth, const Image<FVector<double, 2>, 2>& flow_estimation, int dim)
+ {
+ 
+ 	int w = ground_truth.width();
+ 	int h = ground_truth.height();
+
+ 	if (flow_estimation.width() != w || flow_estimation.height() != h)
+ 		throw ( "Les dimensions des images a comparer ne correspondent pas" );
+
+
+ 	Image<double, 2> error(w,h);
+ 	if (dim < 0 && dim > 1)
+ 		throw ( "Dimension de reference invalide pour le calcul de l'erreur" );
+
+ 	for (int i = 0; i < w; i++)
+ 		for (int j = 0; j < h; j++)
+ 			error(i, j) = abs(ground_truth(i, j)[dim] - flow_estimation(i, j)[dim]);
+ 	return error;
+ }
+
 
 
 //  int hex2dec(string hex_bytes)
@@ -222,84 +293,3 @@ Image<FVector<double, 2>, 2 > flow_from_file(string& path){
 // 	}
 // }
 
-// Image<double, 2> dim_wise_error(const Image<FVector<double, 2>, 2>& ground_truth, const Image<FVector<double, 2>, 2>& flow_estimation, int dim)
-// {
-// 	/**
-// 		dim_wise_error(ground_truth, flow_estimation, dim):
-// 		Computes an image of error between the $ground_truth$
-// 		and the $flow_estimation$ based on their local difference
-// 		on the $dim$ dimension
-// 	*/
-// 	int w = ground_truth.width();
-// 	int h = ground_truth.height();
-
-// 	if (flow_estimation.width() != w || flow_estimation.height() != h)
-// 		throw ( "Les dimensions des images a comparer ne correspondent pas" );
-		
-
-// 	Image<double, 2> error(w,h);
-// 	if (dim < 0 && dim > 1)
-// 		throw ( "Dimension de reference invalide pour le calcul de l'erreur" );
-		
-// 	for (int i = 0; i < w; i++)
-// 		for (int j = 0; j < h; j++)
-// 			error(i, j) = abs(ground_truth(i, j)[dim] - flow_estimation(i, j)[dim]);
-// 	return error;
-// }
-
-// Image<double, 2> norm_error(const Image<FVector<double, 2>, 2>& ground_truth, const Image<FVector<double, 2>, 2>& flow_estimation)
-// {
-// 	/**
-// 		norm_error(ground_truth, flow_estimation, quadratic = false):
-// 		Computes an image of error between the $ground_truth$
-// 		and the $flow_estimation$ based on their local difference
-// 		regarding the euclidian norm.
-// 		If $quadratic$ is set to true then the euclidian norm
-// 		squared is taken into account.
-// 	*/
-// 	int w = ground_truth.width();
-// 	int h = ground_truth.height();
-
-// 	if (flow_estimation.width() != w || flow_estimation.height() != h)
-// 		throw ( "Les dimensions des images a comparer ne correspondent pas" );
-		
-
-// 	Image<double, 2> error(w,h);
-// 	for (int i = 0; i < w; i++)
-// 		for (int j = 0; j < h; j++)
-// 			error(i, j) = norm(ground_truth(i, j) - flow_estimation(i, j));
-
-// 	return error;
-// }
-
-// Image<double, 2> error_map(const Image<FVector<double, 2>, 2>& ground_truth, const Image<FVector<double, 2>, 2>& flow_estimation, string mode)
-// {
-// 	/**
-// 		error_map(mode, ground_truth, flow_estimation):
-// 		Computes an image of error between the $ground_truth$
-// 		and the $flow_estimation$ based on the specified $mode$
-// 		among	HRZT (horizontal component of gradient vectors)
-// 		VERT (vertical component of gradient vectors)
-// 		NORM (euclidian norm of difference)
-// 		NORM2 (square of euclidian norm of difference)
-// 	*/
-// 	int w = ground_truth.width();
-// 	int h = ground_truth.height();
-
-// 	if (flow_estimation.width() != w || flow_estimation.height() != h)
-// 		throw ( "Les dimensions des images a comparer ne correspondent pas" );
-		
-
-// 	Image<double, 2> error_map;
-// 	if (mode == "HRZT")
-// 		error_map = dim_wise_error(ground_truth, flow_estimation, 0);
-// 	else if (mode == "VERT")
-// 		error_map = dim_wise_error(ground_truth, flow_estimation, 1);
-// 	else if (mode == "NORM")
-// 		error_map = norm_error(ground_truth, flow_estimation);
-// 	else
-// 		throw ( "Methode renseignee inconnue" );
-		
-
-// 	return error_map;
-// }

@@ -15,10 +15,27 @@ using namespace Imagine;
 
 
 /**
-* Lit le fichier .flo indique par le chemin $path$, fabrique et retourne une carte de gradient theorique a partir
-* du code hexadecimal du fichier en utilisant une fonction annexe de lecture de fichiers .flo donnée sur Middleburry
+* Lit le fichier .flo indique par le chemin $path$, en utilisant une fonction annexe de lecture de fichiers .flo donnee sur Middleburry
 */
 Image<FVector<double, 2>, 2 > flow_from_file(string& path);
+
+
+/**
+ * Calcule une map d'erreur entre un flow optique et une ground truth
+ */
+Image<double, 2> error_map(const Image<FVector<double, 2>, 2>& ground_truth, const Image<FVector<double, 2>, 2>& flow_estimation, string mode = "NORM");
+
+/**
+ *  Calcul local d'erreur verticale et horizontale
+ */
+Image<double, 2> dim_wise_error(const Image<FVector<double, 2>, 2>& ground_truth,const Image<FVector<double, 2>, 2>& flow_estimation, int dim);
+
+
+/**
+ * Calcul local d'erreur L2
+ */
+Image<double, 2> norm_error(const Image<FVector<double, 2>, 2>& ground_truth, const Image<FVector<double, 2>, 2>& flow_estimation);
+
 
 
 // TOUTES LES FONCTIONS QUI SUIVENT NE SONT PAS UTILISEES CAR ELLES CONTIENNENT DES ERREURS
@@ -28,8 +45,7 @@ Image<FVector<double, 2>, 2 > flow_from_file(string& path);
 // ========================================================================================
 // ========================================================================================
 // ========================================================================================
-// ========================================================================================
-// ========================================================================================
+
 
 /**
 * Transforme un groupement hexadecimal de bytes en int
@@ -76,22 +92,6 @@ bool right_stream_pos(istream& stream, int row, int col, int width, int height);
 * du code hexadecimal du fichier. Pour obtenir les conventions de codage du fichier .flo, se referrer a la documentation Middlebury
 */
 Image<FVector<double, 2>, 2 > flow_from_txt(string& path);
-
-/**
-* Computes an image of error between the $ground_truth$ and the $flow_estimation$ based on their local difference on the $dim$ dimension
-*/
-Image<double, 2> dim_wise_error(const Image<FVector<double, 2>, 2>& ground_truth,const Image<FVector<double, 2>, 2>& flow_estimation, int dim);
-
-/**
-* Computes an image of error between the $ground_truth$
-* and the $flow_estimation$ based on their local difference regarding the euclidian norm.
-*/
-Image<double, 2> norm_error(const Image<FVector<double, 2>, 2>& ground_truth, const Image<FVector<double, 2>, 2>& flow_estimation);
-
-/**
-* Computes an image of error between the $ground_truth$ and the $flow_estimation$ based on the specified $mode$
-*/
-Image<double, 2> error_map(const Image<FVector<double, 2>, 2>& ground_truth, const Image<FVector<double, 2>, 2>& flow_estimation, string mode = "NORM");
 
 
 
